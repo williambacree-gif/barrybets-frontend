@@ -109,6 +109,11 @@ const EntrySetup = ({user,league,existingEntries,onDone}) => {
     setLoading(true); setError("");
     try {
       const existing = existingEntries?.length || 0;
+      if(!league || !league.id) {
+        setError("League not found. Please refresh and try again.");
+        setLoading(false);
+        return;
+      }
       if(count > existing) {
         await createEntries(league.id, count - existing, displayName);
       }
@@ -577,22 +582,33 @@ export default function BarryBets() {
   const loadUserData = useCallback(async()=>{
     if(!user) return;
     try {
-      // Get or create league membership
-      const {data:memberships} = await supabase.from("league_members").select("league_id,leagues(*)").eq("user_id",user.id);
+      // Get league membership
+      const {data:memberships,error:memErr} = await supabase.from("league_members").select("league_id,role").eq("user_id",user.id);
+      console.log("Memberships:", memberships, memErr);
+      
+      let leagueId = null;
       if(memberships && memberships.length > 0) {
-        setLeague(memberships[0].leagues);
-        const myEntries = await getMyEntries(memberships[0].league_id);
-        setEntries(myEntries);
-        if(myEntries.length === 0) setShowSetup(true);
+        leagueId = memberships[0].league_id;
       } else {
-        // No league yet - check if there's a league to join, or show setup
+        // Not in a league yet - find one and auto-join
         const {data:leagues} = await supabase.from("leagues").select("*").limit(1);
         if(leagues && leagues.length > 0) {
-          // Auto-join first league
           await supabase.from("league_members").insert({league_id:leagues[0].id,user_id:user.id,role:"member"});
-          setLeague(leagues[0]);
-          setShowSetup(true);
+          leagueId = leagues[0].id;
         }
+      }
+      
+      if(leagueId) {
+        // Get league details separately
+        const {data:leagueData} = await supabase.from("leagues").select("*").eq("id",leagueId).single();
+        console.log("League:", leagueData);
+        setLeague(leagueData);
+        
+        // Get my entries
+        const myEntries = await getMyEntries(leagueId);
+        console.log("My entries:", myEntries);
+        setEntries(myEntries);
+        if(myEntries.length === 0) setShowSetup(true);
       }
     } catch(err) { console.error("Load user data error:", err); }
   },[user]);
