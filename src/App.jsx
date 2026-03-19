@@ -181,6 +181,16 @@ const GameCard = ({game,pick,onPick,usedTeams=[],locked=false}) => {
   const tB = game.team_b;
   const isUsedA = usedTeams.includes(tA.name);
   const isUsedB = usedTeams.includes(tB.name);
+  const isGameLocked = (()=>{
+    if(!game.game_time||!game.game_date) return false;
+    const tp=game.game_time.match(/(\d+):(\d+)\s*(AM|PM)/);
+    if(!tp) return false;
+    let h=parseInt(tp[1]);const m=parseInt(tp[2]);
+    if(tp[3]==="PM"&&h!==12) h+=12; if(tp[3]==="AM"&&h===12) h=0;
+    const tip=new Date(game.game_date+"T"+String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":00-04:00");
+    return new Date()>=new Date(tip.getTime()-30*60*1000);
+  })();
+  const gameLocked = locked || isGameLocked;
 
   return (
     <div style={{background:C.navyLight,borderRadius:C.r,border:`1px solid ${pick?C.borderGold:C.border}`,marginBottom:10,overflow:"hidden",boxShadow:pick?C.shadowGold:C.shadow}}>
@@ -194,18 +204,19 @@ const GameCard = ({game,pick,onPick,usedTeams=[],locked=false}) => {
       </div>
       <div style={{display:"flex",gap:8,padding:"0 16px 14px"}}>
         {[{team:tA,used:isUsedA},{team:tB,used:isUsedB}].map(({team,used})=>(
-          <button key={team.id} onClick={()=>!locked&&!used&&onPick(game.id,team.id,team.name)} disabled={locked||used} style={{
+          <button key={team.id} onClick={()=>!gameLocked&&!used&&onPick(game.id,team.id,team.name)} disabled={gameLocked||used} style={{
             flex:1,padding:"12px 8px",borderRadius:C.rSm,textAlign:"center",
             border:pick===team.id?`2px solid ${C.gold}`:used?`1.5px solid rgba(212,91,86,0.4)`:`1.5px solid ${C.border}`,
             background:pick===team.id?C.goldSubtle:used?"rgba(212,91,86,0.06)":C.navyDark,
             color:pick===team.id?C.goldLight:used?C.red:C.cream,opacity:used?0.35:1,
-            cursor:locked||used?"default":"pointer",transition:"all 0.25s",fontFamily:"'Cormorant Garamond', serif",
+            cursor:gameLocked||used?"default":"pointer",transition:"all 0.25s",fontFamily:"'Cormorant Garamond', serif",
             boxShadow:pick===team.id?C.shadowGold:"none",
           }}>
             <div style={{fontSize:10,color:pick===team.id?C.gold:C.creamSubtle,fontFamily:"'Raleway'",marginBottom:3,fontWeight:600}}>({team.seed})</div>
             <div style={{fontSize:14,fontWeight:600}}>{team.name}</div>
             {used&&pick!==team.id&&<div style={{fontSize:9,color:C.red,marginTop:3,fontFamily:"'Raleway'",fontWeight:700}}>{"\u{1F6AB}"} USED</div>}
             {pick===team.id&&<div style={{fontSize:9,color:C.gold,marginTop:3,fontFamily:"'Raleway'",fontWeight:500,letterSpacing:"0.08em"}}>YOUR PICK</div>}
+            {isGameLocked&&!pick&&!used&&<div style={{fontSize:9,color:C.red,marginTop:3,fontFamily:"'Raleway'",fontWeight:600}}>LOCKED</div>}
           </button>
         ))}
       </div>
