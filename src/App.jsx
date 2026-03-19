@@ -241,6 +241,18 @@ const PicksScreen = ({user,entries,refreshEntries}) => {
     setLoading(true);
     try {
       const g = await getGamesForDate(dayFilter);
+      // Sort by actual tip time
+      g.sort((a,b) => {
+        const parseTime = (t) => {
+          if(!t) return 9999;
+          const m = t.match(/(\d+):(\d+)\s*(AM|PM)/);
+          if(!m) return 9999;
+          let h = parseInt(m[1]); const mn = parseInt(m[2]);
+          if(m[3]==="PM"&&h!==12) h+=12; if(m[3]==="AM"&&h===12) h=0;
+          return h*60+mn;
+        };
+        return parseTime(a.game_time) - parseTime(b.game_time);
+      });
       setGames(g);
       // Load picks and used teams for each entry
       const p = {}; const u = {};
@@ -360,7 +372,10 @@ const BracketScreen = ({onBack}) => {
     })();
   },[]);
 
-  const regionGames = games.filter(g=>g.region===region).sort((a,b)=>(a.game_time||"").localeCompare(b.game_time||""));
+  const regionGames = games.filter(g=>g.region===region).sort((a,b)=>{
+    const parseTime=(t)=>{if(!t)return 9999;const m=t.match(/(\d+):(\d+)\s*(AM|PM)/);if(!m)return 9999;let h=parseInt(m[1]);const mn=parseInt(m[2]);if(m[3]==="PM"&&h!==12)h+=12;if(m[3]==="AM"&&h===12)h=0;return h*60+mn;};
+    return parseTime(a.game_time)-parseTime(b.game_time);
+  });
 
   return (
     <div style={{paddingBottom:100}}>
