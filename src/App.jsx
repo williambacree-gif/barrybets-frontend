@@ -426,17 +426,42 @@ const BracketScreen = ({onBack}) => {
 // ─── Standings Screen (Real Data) ────────────────────────────
 const StandingsScreen = ({league}) => {
   const [allEntries,setAllEntries]=useState([]);
+  const [entryPicks,setEntryPicks]=useState({});
+  const [teams,setTeams]=useState({});
   const [loading,setLoading]=useState(true);
+  const [dayFilter,setDayFilter]=useState("2026-03-19");
 
   useEffect(()=>{
     (async()=>{
       try {
         const entries = await getAllEntries(league?.id);
         setAllEntries(entries||[]);
+        
+        // Load all teams for name lookup
+        const allTeams = await getAllTeams();
+        const teamMap = {};
+        (allTeams||[]).forEach(t => { teamMap[t.id] = t; });
+        setTeams(teamMap);
+        
+        // Load picks for each entry for the selected day
+        const picksMap = {};
+        for(const entry of (entries||[])) {
+          const {data:picks} = await supabase.from("picks").select("*").eq("entry_id",entry.id).eq("pick_date",dayFilter);
+          if(picks && picks.length > 0) {
+            const teamId = picks[0].team_id;
+            const team = teamMap[teamId];
+            picksMap[entry.id] = {
+              teamName: team?.name || "Unknown",
+              teamSeed: team?.seed,
+              result: picks[0].result,
+            };
+          }
+        }
+        setEntryPicks(picksMap);
       } catch(err) { console.error(err); }
       setLoading(false);
     })();
-  },[league]);
+  },[league,dayFilter]);
 
   const sorted = [...allEntries].sort((a,b)=>(b.total_points||0)-(a.total_points||0));
   const aliveCount = sorted.filter(e=>e.status==="alive").length;
@@ -459,33 +484,62 @@ const StandingsScreen = ({league}) => {
             </div>
           ))}
         </div>
-        <div style={{background:C.goldSubtle,border:`1px solid ${C.borderGold}`,borderRadius:C.r,padding:"12px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:18}}>{"\u{1F3C6}"}</span>
+        <div style={{background:C.goldSubtle,border:`1px solid ${C.borderGold}`,borderRadius:C.r,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:18}}>{String.fromCodePoint(0x1F3C6)}</span>
           <div>
             <div style={{fontWeight:600,fontSize:11,color:C.gold,fontFamily:"'Raleway'"}}>SINGLE ENTRY WINS</div>
             <div style={{fontSize:11,color:C.textMid,fontFamily:"'Raleway'",marginTop:2}}>The one entry with the most points takes the pot.</div>
           </div>
         </div>
+
+        {/* Day filter for picks */}
+        <div style={{display:"flex",gap:8,marginBottom:16}}>
+          {[["2026-03-19","Thu Mar 19"],["2026-03-20","Fri Mar 20"]].map(([d,label])=>(
+            <button key={d} onClick={()=>setDayFilter(d)} style={{padding:"8px 20px",borderRadius:20,background:dayFilter===d?C.gold:C.navyLight,color:dayFilter===d?C.navyDark:C.cream,border:dayFilter===d?"none":`1px solid ${C.border}`,cursor:"pointer",fontFamily:"'Raleway'",fontSize:12,fontWeight:600}}>{label}</button>
+          ))}
+        </div>
+
         {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading...</div> : (
           <>
             <Label>All Entries ({sorted.length})</Label>
             <div style={{background:C.navyLight,borderRadius:C.r,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-              {sorted.map((e,i)=>(
-                <div key={e.id} style={{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<sorted.length-1?`1px solid ${C.border}`:"none",gap:10,opacity:e.status==="eliminated"?0.45:1}}>
-                  <span style={{width:22,fontWeight:700,fontSize:14,color:i===0?C.gold:i<=2?C.creamMuted:C.creamSubtle,textAlign:"center",fontFamily:"'Cormorant Garamond', serif"}}>{i+1}</span>
-                  <Avatar name={e.profiles?.display_name||e.name||"?"} size={30} color={colors[i%colors.length]}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:600,fontSize:14,color:C.cream,fontFamily:"'Cormorant Garamond', serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name||`Entry ${e.entry_number}`}</div>
-                    <div style={{display:"flex",gap:6,marginTop:2}}>
-                      {e.status==="alive"?<Badge color={C.green} bg={C.greenBg}>ALIVE</Badge>:<Badge color={C.red} bg={C.redBg}>OUT</Badge>}
+              {sorted.map((e,i)=>{
+                const pick = entryPicks[e.id];
+                return (
+                  <div key={e.id} style={{padding:"12px 16px",borderBottom:i<sorted.length-1?`1px solid ${C.border}`:"none",opacity:e.status==="eliminated"?0.45:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{width:22,fontWeight:700,fontSize:14,color:i===0?C.gold:i<=2?C.creamMuted:C.creamSubtle,textAlign:"center",fontFamily:"'Cormorant Garamond', serif"}}>{i+1}</span>
+                      <Avatar name={e.profiles?.display_name||e.name||"?"} size={30} color={colors[i%colors.length]}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,fontSize:14,color:C.cream,fontFamily:"'Cormorant Garamond', serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name||"Entry "+e.entry_number}</div>
+                        <div style={{display:"flex",gap:6,marginTop:2}}>
+                          {e.status==="alive"?<Badge color={C.green} bg={C.greenBg}>ALIVE</Badge>:<Badge color={C.red} bg={C.redBg}>OUT</Badge>}
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontWeight:700,fontSize:20,color:(e.total_points||0)>0?C.gold:C.creamSubtle,fontFamily:"'Cormorant Garamond', serif"}}>{e.total_points||0}</div>
+                        <div style={{color:C.creamSubtle,fontSize:9,fontFamily:"'Raleway'",letterSpacing:"0.1em"}}>PTS</div>
+                      </div>
                     </div>
+                    {/* Today's pick */}
+                    {pick ? (
+                      <div style={{marginTop:8,marginLeft:32,display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:10,color:C.creamSubtle,fontFamily:"'Raleway'"}}>Pick:</span>
+                        <span style={{fontSize:12,fontWeight:600,color:pick.result==="win"?C.green:pick.result==="loss"?C.red:C.gold,fontFamily:"'Cormorant Garamond', serif"}}>
+                          ({pick.teamSeed}) {pick.teamName}
+                        </span>
+                        {pick.result==="win"&&<Badge color={C.green} bg={C.greenBg}>WIN</Badge>}
+                        {pick.result==="loss"&&<Badge color={C.red} bg={C.redBg}>LOSS</Badge>}
+                        {pick.result==="pending"&&<Badge color={C.gold} bg={C.goldMuted}>PENDING</Badge>}
+                      </div>
+                    ) : e.status==="alive" ? (
+                      <div style={{marginTop:8,marginLeft:32}}>
+                        <span style={{fontSize:10,color:C.creamSubtle,fontFamily:"'Raleway'",fontStyle:"italic"}}>No pick yet</span>
+                      </div>
+                    ) : null}
                   </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontWeight:700,fontSize:20,color:(e.total_points||0)>0?C.gold:C.creamSubtle,fontFamily:"'Cormorant Garamond', serif"}}>{e.total_points||0}</div>
-                    <div style={{color:C.creamSubtle,fontSize:9,fontFamily:"'Raleway'",letterSpacing:"0.1em"}}>PTS</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
