@@ -278,7 +278,8 @@ const PicksScreen = ({user,entries,refreshEntries}) => {
     try {
       await submitPick(entry.id, gameId, teamId, 1, dayFilter);
       setPicks(prev => ({...prev, [entry.id]: teamId}));
-      setUsedTeams(prev => ({...prev, [entry.id]: [...(prev[entry.id]||[]), teamName]}));
+      // Don't add to usedTeams here - usedTeams only tracks PREVIOUS rounds
+      // Current round pick is tracked by the picks state, not usedTeams
     } catch(err) { alert(err.message); }
     setSaving(false);
   };
