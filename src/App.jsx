@@ -200,22 +200,33 @@ const GameCard = ({game,pick,onPick,usedTeams=[],locked=false}) => {
           <span style={{fontSize:9,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>{game.game_time||""}</span>
           <span style={{fontSize:9,color:C.creamSubtle,fontFamily:"'Raleway'"}}>{game.tv_network||""}</span>
         </div>
-        <Badge>1 pt</Badge>
+        {game.status==="final"?(
+          <Badge color={C.cream} bg={C.navyDark}>FINAL</Badge>
+        ):(
+          <Badge>1 pt</Badge>
+        )}
       </div>
+      {game.status==="final"&&game.team_a_score!=null&&(
+        <div style={{padding:"0 16px 8px",display:"flex",justifyContent:"center",gap:16,alignItems:"center"}}>
+          <span style={{fontSize:14,fontWeight:700,color:game.team_a_score>game.team_b_score?C.green:C.red,fontFamily:"'Cormorant Garamond', serif"}}>{tA.name} {game.team_a_score}</span>
+          <span style={{fontSize:10,color:C.creamSubtle,fontFamily:"'Raleway'"}}>-</span>
+          <span style={{fontSize:14,fontWeight:700,color:game.team_b_score>game.team_a_score?C.green:C.red,fontFamily:"'Cormorant Garamond', serif"}}>{game.team_b_score} {tB.name}</span>
+        </div>
+      )}
       <div style={{display:"flex",gap:8,padding:"0 16px 14px"}}>
         {[{team:tA,used:isUsedA},{team:tB,used:isUsedB}].map(({team,used})=>(
           <button key={team.id} onClick={()=>!gameLocked&&!used&&onPick(game.id,team.id,team.name)} disabled={gameLocked||used} style={{
             flex:1,padding:"12px 8px",borderRadius:C.rSm,textAlign:"center",
-            border:pick===team.id?`2px solid ${C.gold}`:used?`1.5px solid rgba(212,91,86,0.4)`:`1.5px solid ${C.border}`,
-            background:pick===team.id?C.goldSubtle:used?"rgba(212,91,86,0.06)":C.navyDark,
-            color:pick===team.id?C.goldLight:used?C.red:C.cream,opacity:used?0.35:1,
+            border:pick===team.id?(game.status==="final"?(game.winner?.id===team.id||game.winner_id===team.id?`2px solid ${C.green}`:`2px solid ${C.red}`):`2px solid ${C.gold}`):used?`1.5px solid rgba(212,91,86,0.4)`:`1.5px solid ${C.border}`,
+            background:pick===team.id?(game.status==="final"?(game.winner?.id===team.id||game.winner_id===team.id?C.greenBg:C.redBg):C.goldSubtle):used?"rgba(212,91,86,0.06)":C.navyDark,
+            color:pick===team.id?(game.status==="final"?(game.winner?.id===team.id||game.winner_id===team.id?C.green:C.red):C.goldLight):used?C.red:C.cream,opacity:used?0.35:1,
             cursor:gameLocked||used?"default":"pointer",transition:"all 0.25s",fontFamily:"'Cormorant Garamond', serif",
             boxShadow:pick===team.id?C.shadowGold:"none",
           }}>
             <div style={{fontSize:10,color:pick===team.id?C.gold:C.creamSubtle,fontFamily:"'Raleway'",marginBottom:3,fontWeight:600}}>({team.seed})</div>
             <div style={{fontSize:14,fontWeight:600}}>{team.name}</div>
             {used&&pick!==team.id&&<div style={{fontSize:9,color:C.red,marginTop:3,fontFamily:"'Raleway'",fontWeight:700}}>{"\u{1F6AB}"} USED</div>}
-            {pick===team.id&&<div style={{fontSize:9,color:C.gold,marginTop:3,fontFamily:"'Raleway'",fontWeight:500,letterSpacing:"0.08em"}}>YOUR PICK</div>}
+            {pick===team.id&&<div style={{fontSize:9,color:game.status==="final"?(game.winner?.id===team.id||game.winner_id===team.id?C.green:C.red):C.gold,marginTop:3,fontFamily:"'Raleway'",fontWeight:700,letterSpacing:"0.08em"}}>{game.status==="final"?(game.winner?.id===team.id||game.winner_id===team.id?"✓ WIN":"✗ LOSS"):"YOUR PICK"}</div>}
             {isGameLocked&&!pick&&!used&&<div style={{fontSize:9,color:C.red,marginTop:3,fontFamily:"'Raleway'",fontWeight:600}}>LOCKED</div>}
           </button>
         ))}
@@ -428,6 +439,7 @@ const BracketScreen = ({onBack}) => {
 const StandingsScreen = ({league}) => {
   const [allEntries,setAllEntries]=useState([]);
   const [entryPicks,setEntryPicks]=useState({});
+  const [allUsedTeams,setAllUsedTeams]=useState({});
   const [teams,setTeams]=useState({});
   const [loading,setLoading]=useState(true);
   const [dayFilter,setDayFilter]=useState("2026-03-19");
@@ -446,6 +458,7 @@ const StandingsScreen = ({league}) => {
         
         // Load picks for each entry for the selected day
         const picksMap = {};
+        const usedMap = {};
         for(const entry of (entries||[])) {
           const {data:picks} = await supabase.from("picks").select("*").eq("entry_id",entry.id).eq("pick_date",dayFilter);
           if(picks && picks.length > 0) {
@@ -457,8 +470,14 @@ const StandingsScreen = ({league}) => {
               result: picks[0].result,
             };
           }
+          // Load ALL used teams for this entry (all rounds)
+          const {data:used} = await supabase.from("used_teams").select("team_id").eq("entry_id",entry.id);
+          if(used && used.length > 0) {
+            usedMap[entry.id] = used.map(u => teamMap[u.team_id]?.name || "Unknown");
+          }
         }
         setEntryPicks(picksMap);
+        setAllUsedTeams(usedMap);
       } catch(err) { console.error(err); }
       setLoading(false);
     })();
@@ -538,6 +557,14 @@ const StandingsScreen = ({league}) => {
                         <span style={{fontSize:10,color:C.creamSubtle,fontFamily:"'Raleway'",fontStyle:"italic"}}>No pick yet</span>
                       </div>
                     ) : null}
+                    {/* All teams used by this entry */}
+                    {allUsedTeams[e.id] && allUsedTeams[e.id].length > 0 && (
+                      <div style={{marginTop:6,marginLeft:32,display:"flex",flexWrap:"wrap",gap:4}}>
+                        {allUsedTeams[e.id].map((ut,idx)=>(
+                          <span key={idx} style={{fontSize:9,padding:"2px 8px",borderRadius:10,background:C.creamFaint,color:C.creamSubtle,fontFamily:"'Raleway'"}}>{ut}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
