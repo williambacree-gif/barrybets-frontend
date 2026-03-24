@@ -9,17 +9,22 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // ─── Constants ───────────────────────────────────────────────
 const TID = "00000000-0000-0000-0000-000000002026";
 const LEAGUE_ID = "a0000000-0000-0000-0000-000000000001";
-const ROUND = 3; // Sweet 16
-const PTS_PER_WIN = 3;
+// Round config - points increase each round
+const ROUND_CONFIG = {
+  3: { name: "Sweet 16", pts: 3, dates: ["2026-03-26","2026-03-27"] },
+  4: { name: "Elite Eight", pts: 4, dates: ["2026-03-28","2026-03-29"] },
+  5: { name: "Final Four", pts: 5, dates: ["2026-04-04"] },
+  6: { name: "Championship", pts: 6, dates: ["2026-04-06"] },
+};
 const LOCK_MINUTES = 30; // lock picks 30 min before tip
 
 const C = {
   navy:"#1A1F2E",navyLight:"#232838",navyDark:"#12161F",
   gold:"#C4933F",goldLight:"#D4A74F",goldMuted:"rgba(196,147,63,0.15)",goldSubtle:"rgba(196,147,63,0.08)",
-  cream:"#E8DDD0",creamMuted:"rgba(232,221,208,0.6)",creamSubtle:"rgba(232,221,208,0.3)",creamFaint:"rgba(232,221,208,0.12)",
+  cream:"#E8DDD0",creamMuted:"rgba(232,221,208,0.78)",creamSubtle:"rgba(232,221,208,0.55)",creamFaint:"rgba(232,221,208,0.18)",
   green:"#6DBF73",greenBg:"rgba(109,191,115,0.12)",red:"#D45B56",redBg:"rgba(212,91,86,0.12)",
   border:"rgba(232,221,208,0.08)",borderGold:"rgba(196,147,63,0.25)",
-  pageBg:"#F5F2ED",textDark:"#1A1F2E",textMid:"#5A5A5A",textLight:"#8A8A8A",
+  pageBg:"#F5F2ED",textDark:"#1A1F2E",textMid:"#4A4A4A",textLight:"#6A6A6A",
   r:12,rSm:8,
 };
 
@@ -45,13 +50,13 @@ function sortByTipTime(a, b) {
 }
 
 // ─── Shared UI Components ────────────────────────────────────
-const HexLogo = ({size=80}) => (
+const HexLogo = ({size=80,dark=false}) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-    <polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" stroke={C.gold} strokeWidth="2" fill="none"/>
-    <polygon points="50,12 86,31 86,69 50,88 14,69 14,31" stroke={C.creamSubtle} strokeWidth="0.5" fill="none"/>
-    <text x="50" y="36" textAnchor="middle" fill={C.creamSubtle} fontSize="7" fontFamily="Raleway" letterSpacing="2.5" fontWeight="500">BARRY</text>
-    <text x="50" y="58" textAnchor="middle" fill={C.cream} fontSize="20" fontFamily="Cormorant Garamond" fontWeight="600">BETS</text>
-    <text x="50" y="78" textAnchor="middle" fill={C.creamSubtle} fontSize="7" fontFamily="Raleway" letterSpacing="2" fontWeight="400">SWEET 16</text>
+    <polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" stroke={dark?C.gold:C.navy} strokeWidth="2" fill="none"/>
+    <polygon points="50,12 86,31 86,69 50,88 14,69 14,31" stroke={dark?C.creamSubtle:C.gold} strokeWidth="0.5" fill="none"/>
+    <text x="50" y="36" textAnchor="middle" fill={dark?C.creamSubtle:C.gold} fontSize="7" fontFamily="Raleway" letterSpacing="2.5" fontWeight="500">BARRY</text>
+    <text x="50" y="58" textAnchor="middle" fill={dark?C.cream:C.navy} fontSize="20" fontFamily="Cormorant Garamond" fontWeight="600">BETS</text>
+    <text x="50" y="78" textAnchor="middle" fill={dark?C.creamSubtle:C.gold} fontSize="7" fontFamily="Raleway" letterSpacing="2" fontWeight="400">EST. 2026</text>
   </svg>
 );
 
@@ -68,13 +73,13 @@ const GoldDiv = () => (
 );
 
 const Label = ({children}) => (
-  <div style={{fontSize:10,fontWeight:600,color:C.gold,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:14,fontFamily:"'Raleway'"}}>{children}</div>
+  <div style={{fontSize:11,fontWeight:600,color:C.gold,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:14,fontFamily:"'Raleway'"}}>{children}</div>
 );
 
 const TabBar = ({active,onChange}) => (
   <nav style={{display:"flex",justifyContent:"space-around",alignItems:"center",position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(18,22,31,0.95)",backdropFilter:"blur(20px)",borderTop:`1px solid ${C.border}`,padding:"8px 0 28px",zIndex:100}}>
     {[{id:"picks",label:"PICKS"},{id:"standings",label:"STANDINGS"},{id:"bracket",label:"BRACKET"},{id:"league",label:"LEAGUE"}].map(t=>(
-      <button key={t.id} onClick={()=>onChange(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 16px",border:"none",background:"none",cursor:"pointer",color:active===t.id?C.gold:C.creamSubtle,fontSize:9,fontWeight:600,letterSpacing:"0.12em",fontFamily:"'Raleway'",transition:"color 0.3s"}}>
+      <button key={t.id} onClick={()=>onChange(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 16px",border:"none",background:"none",cursor:"pointer",color:active===t.id?C.gold:C.creamSubtle,fontSize:10,fontWeight:600,letterSpacing:"0.12em",fontFamily:"'Raleway'",transition:"color 0.3s"}}>
         <span>{t.label}</span>
       </button>
     ))}
@@ -110,7 +115,7 @@ const LoginScreen = ({onLogin}) => {
 
   if (showReset) return (
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 32px",background:`radial-gradient(ellipse at 50% 30%,#232838 0%,${C.navy} 60%,${C.navyDark} 100%)`}}>
-      <HexLogo size={80}/>
+      <HexLogo size={80} dark={true}/>
       <h2 style={{fontSize:22,color:C.cream,fontFamily:"'Cormorant Garamond', serif",margin:"20px 0 8px"}}>Reset Password</h2>
       <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Raleway'",marginBottom:20,textAlign:"center"}}>Enter your email and we'll send a reset link.</p>
       <div style={{width:"100%",maxWidth:360}}>
@@ -124,9 +129,9 @@ const LoginScreen = ({onLogin}) => {
 
   return (
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 32px",background:`radial-gradient(ellipse at 50% 30%,#232838 0%,${C.navy} 60%,${C.navyDark} 100%)`}}>
-      <HexLogo size={110}/>
+      <HexLogo size={110} dark={true}/>
       <div style={{fontSize:11,fontWeight:600,color:C.creamSubtle,letterSpacing:"0.25em",marginTop:28,marginBottom:8,fontFamily:"'Raleway'"}}>MARCH MADNESS</div>
-      <div style={{fontSize:13,fontWeight:600,color:C.gold,letterSpacing:"0.15em",marginBottom:28,fontFamily:"'Raleway'"}}>SWEET 16 SURVIVOR</div>
+      <div style={{fontSize:13,fontWeight:600,color:C.gold,letterSpacing:"0.15em",marginBottom:28,fontFamily:"'Raleway'"}}>MARCH MADNESS SURVIVOR</div>
       <div style={{width:"100%",maxWidth:360}}>
         <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email address" style={{width:"100%",padding:"16px",borderRadius:C.rSm,border:`1px solid ${C.border}`,background:"#3D4238",color:C.cream,fontSize:15,fontFamily:"'Raleway'",marginBottom:12,outline:"none",boxSizing:"border-box"}}/>
         <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="Password" style={{width:"100%",padding:"16px",borderRadius:C.rSm,border:`1px solid ${C.border}`,background:"#3D4238",color:C.cream,fontSize:15,fontFamily:"'Raleway'",marginBottom:12,outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/>
@@ -183,8 +188,8 @@ const GameCard = ({game,myPick,onPick,usedTeams=[],entryStatus}) => {
         transition:"all 0.25s",fontFamily:"'Cormorant Garamond', serif",
       }}>
         <div style={{fontSize:10,color:isPicked?C.gold:C.creamSubtle,fontFamily:"'Raleway'",marginBottom:3,fontWeight:600}}>({team.seed})</div>
-        <div style={{fontSize:14,fontWeight:600}}>{team.name}</div>
-        {isFinal && <div style={{fontSize:13,fontWeight:700,marginTop:4,color:isWinner?C.green:C.red}}>
+        <div style={{fontSize:16,fontWeight:700}}>{team.name}</div>
+        {isFinal && <div style={{fontSize:16,fontWeight:700,marginTop:4,color:isWinner?C.green:C.red}}>
           {team.id===game.team_a?.id ? game.team_a_score : game.team_b_score}
         </div>}
         {isUsed&&!isPicked&&<div style={{fontSize:9,color:C.red,marginTop:3,fontFamily:"'Raleway'",fontWeight:700}}>USED</div>}
@@ -202,7 +207,8 @@ const GameCard = ({game,myPick,onPick,usedTeams=[],entryStatus}) => {
           <span style={{fontSize:9,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>{game.game_time||""}</span>
           <span style={{fontSize:9,color:C.creamSubtle,fontFamily:"'Raleway'"}}>{game.tv_network||""}</span>
         </div>
-        {isFinal ? <Badge color={C.cream} bg={C.navyDark}>FINAL</Badge> : <Badge>{PTS_PER_WIN} pts</Badge>}
+        {isFinal ? <Badge color={C.cream} bg={C.navyDark}>FINAL</Badge> : <Badge>{(ROUND_CONFIG[game.round]||{pts:3}).pts} pts</Badge>}
+        {game.spread && !isFinal && <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",fontWeight:600,marginTop:4}}>Line: {game.spread}</div>}
       </div>
       <div style={{display:"flex",gap:8,padding:"0 16px 14px"}}>
         {renderTeamBtn(tA, isUsedA)}
@@ -217,17 +223,33 @@ const PicksScreen = ({user,entry,displayName}) => {
   const [games,setGames]=useState([]);
   const [picks,setPicks]=useState({}); // {gameId: teamId}
   const [usedTeamIds,setUsedTeamIds]=useState([]);
-  const [dayFilter,setDayFilter]=useState("2026-03-26");
+  const [dayFilter,setDayFilter]=useState("");
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
+  const [currentRound,setCurrentRound]=useState(3);
+  const [roundDates,setRoundDates]=useState([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Load games for the day
+      // Detect current active round (highest round with games)
+      const {data:allGames} = await supabase.from("games")
+        .select("round, game_date, status")
+        .eq("tournament_id", TID).order("round", {ascending: false});
+      
+      if (allGames && allGames.length > 0) {
+        const maxRound = allGames[0].round;
+        setCurrentRound(maxRound);
+        const rDates = [...new Set(allGames.filter(g => g.round === maxRound).map(g => g.game_date))].sort();
+        setRoundDates(rDates);
+        if (!dayFilter || !rDates.includes(dayFilter)) setDayFilter(rDates[0] || "");
+      }
+
+      // Load games for the selected day
+      const filterDate = dayFilter || (roundDates[0] || "2026-03-26");
       const {data:gamesData} = await supabase.from("games")
         .select("*, team_a:teams!games_team_a_id_fkey(id,name,seed,region), team_b:teams!games_team_b_id_fkey(id,name,seed,region)")
-        .eq("tournament_id", TID).eq("game_date", dayFilter);
+        .eq("tournament_id", TID).eq("game_date", filterDate);
       const sorted = (gamesData||[]).sort(sortByTipTime);
       setGames(sorted);
 
@@ -244,7 +266,7 @@ const PicksScreen = ({user,entry,displayName}) => {
       }
     } catch(err) { console.error("Load error:", err); }
     setLoading(false);
-  }, [dayFilter, entry]);
+  }, [dayFilter, entry, roundDates]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -257,7 +279,7 @@ const PicksScreen = ({user,entry,displayName}) => {
       // Insert new pick
       await supabase.from("picks").insert({
         entry_id: entry.id, game_id: gameId, team_id: teamId,
-        round: ROUND, pick_date: dayFilter, result: "pending"
+        round: currentRound, pick_date: dayFilter || roundDates[0], result: "pending"
       });
       setPicks(prev => ({...prev, [gameId]: teamId}));
     } catch(err) { alert(err.message); }
@@ -275,7 +297,7 @@ const PicksScreen = ({user,entry,displayName}) => {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-            <h1 style={{fontSize:24,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Sweet 16 Survivor</h1>
+            <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>{(ROUND_CONFIG[currentRound]||{name:'Survivor'}).name} Survivor</h1>
             <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>{displayName} {"·"} {entry?.status==="alive"?"ALIVE":"ELIMINATED"}</div>
           </div>
           <HexLogo size={44}/>
@@ -285,8 +307,12 @@ const PicksScreen = ({user,entry,displayName}) => {
         <GoldDiv/>
         {/* Day filter */}
         <div style={{display:"flex",gap:8,marginTop:16,marginBottom:12}}>
-          {[["2026-03-26","Thu Mar 26"],["2026-03-27","Fri Mar 27"]].map(([d,label])=>(
-            <button key={d} onClick={()=>setDayFilter(d)} style={{padding:"8px 20px",borderRadius:20,background:dayFilter===d?C.gold:C.navyLight,color:dayFilter===d?C.navyDark:C.cream,border:dayFilter===d?"none":`1px solid ${C.border}`,cursor:"pointer",fontFamily:"'Raleway'",fontSize:12,fontWeight:600}}>{label}</button>
+          {roundDates.map(d => {
+            const dt = new Date(d + "T12:00:00");
+            const label = dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+            return [d, label];
+          }).map(([d,label])=>(
+            <button key={d} onClick={()=>setDayFilter(d)} style={{padding:"8px 20px",borderRadius:20,background:dayFilter===d?C.gold:C.navyLight,color:dayFilter===d?C.navyDark:C.cream,border:dayFilter===d?"none":`1px solid ${C.border}`,cursor:"pointer",fontFamily:"'Raleway'",fontSize:13,fontWeight:600}}>{label}</button>
           ))}
         </div>
 
@@ -301,7 +327,7 @@ const PicksScreen = ({user,entry,displayName}) => {
           </div>
         ) : (
           <div style={{background:C.navyDark,border:`1px solid ${C.border}`,borderRadius:C.r,padding:"12px 16px",marginBottom:14}}>
-            <div style={{fontWeight:600,fontSize:11,color:C.gold,fontFamily:"'Raleway'"}}>PICK A WINNER — {PTS_PER_WIN} points if correct</div>
+            <div style={{fontWeight:600,fontSize:11,color:C.gold,fontFamily:"'Raleway'"}}>PICK A WINNER — {(ROUND_CONFIG[currentRound]||{pts:3}).pts} points if correct</div>
           </div>
         )}
 
@@ -314,7 +340,7 @@ const PicksScreen = ({user,entry,displayName}) => {
 
         <div style={{marginTop:12,background:"#232838",borderRadius:C.r,padding:"14px",border:`1px solid ${C.border}`}}>
           <div style={{fontSize:10,fontWeight:600,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",marginBottom:4}}>SURVIVOR RULES</div>
-          <div style={{fontSize:11,color:C.creamMuted,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.5}}>Pick 1 winner per day. Straight-up wins only. If your team wins, you survive + earn {PTS_PER_WIN} points. If they lose, you're out. Can't reuse a team.</div>
+          <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.6}}>Pick 1 winner per day. Straight-up wins only. If your team wins, you survive + earn {PTS_PER_WIN} points. If they lose, you're out. Can't reuse a team.</div>
         </div>
       </div>
     </div>
@@ -375,7 +401,7 @@ const StandingsScreen = () => {
     <div style={{paddingBottom:100}}>
       <div style={{padding:"52px 24px 12px"}}>
         <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-        <h1 style={{fontSize:24,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Standings</h1>
+        <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Standings</h1>
       </div>
       <div style={{padding:"0 24px"}}>
         <GoldDiv/>
@@ -390,8 +416,10 @@ const StandingsScreen = () => {
 
         {/* Day filter */}
         <div style={{display:"flex",gap:8,marginBottom:16}}>
-          {[["2026-03-26","Thu Mar 26"],["2026-03-27","Fri Mar 27"]].map(([d,label])=>(
-            <button key={d} onClick={()=>setDayFilter(d)} style={{padding:"8px 20px",borderRadius:20,background:dayFilter===d?C.gold:C.navyLight,color:dayFilter===d?C.navyDark:C.cream,border:dayFilter===d?"none":`1px solid ${C.border}`,cursor:"pointer",fontFamily:"'Raleway'",fontSize:12,fontWeight:600}}>{label}</button>
+          {[["2026-03-26","Thu Mar 26"],["2026-03-27","Fri Mar 27"],["2026-03-28","Sat Mar 28"],["2026-03-29","Sun Mar 29"],["2026-04-04","Sat Apr 4"],["2026-04-06","Mon Apr 6"]].filter(([d])=>{
+            return true; // Show all dates that have games - can refine later
+          }).map(([d,label])=>(
+            <button key={d} onClick={()=>setDayFilter(d)} style={{padding:"8px 20px",borderRadius:20,background:dayFilter===d?C.gold:C.navyLight,color:dayFilter===d?C.navyDark:C.cream,border:dayFilter===d?"none":`1px solid ${C.border}`,cursor:"pointer",fontFamily:"'Raleway'",fontSize:13,fontWeight:600}}>{label}</button>
           ))}
         </div>
 
@@ -411,7 +439,7 @@ const StandingsScreen = () => {
                         {(e.name||"?")[0]}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:600,fontSize:14,color:C.cream,fontFamily:"'Cormorant Garamond', serif"}}>{e.name}</div>
+                        <div style={{fontWeight:600,fontSize:16,color:C.cream,fontFamily:"'Cormorant Garamond', serif"}}>{e.name}</div>
                         <div style={{display:"flex",gap:6,marginTop:2}}>
                           {e.status==="alive"?<Badge color={C.green} bg={C.greenBg}>ALIVE</Badge>:<Badge color={C.red} bg={C.redBg}>OUT</Badge>}
                         </div>
@@ -466,7 +494,7 @@ const BracketScreen = () => {
     (async()=>{
       const {data} = await supabase.from("games")
         .select("*, team_a:teams!games_team_a_id_fkey(id,name,seed,region), team_b:teams!games_team_b_id_fkey(id,name,seed,region)")
-        .eq("tournament_id", TID).eq("round", ROUND);
+        .eq("tournament_id", TID).gte("round", 3);
       setGames((data||[]).sort(sortByTipTime));
       setLoading(false);
     })();
@@ -476,7 +504,7 @@ const BracketScreen = () => {
     <div style={{paddingBottom:100}}>
       <div style={{padding:"52px 24px 12px"}}>
         <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-        <h1 style={{fontSize:24,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Sweet 16 Bracket</h1>
+        <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Tournament Bracket</h1>
       </div>
       <div style={{padding:"0 24px"}}>
         <GoldDiv/>
@@ -495,9 +523,9 @@ const BracketScreen = () => {
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:12,fontWeight:700,color:C.gold,fontFamily:"'Raleway'",width:22,textAlign:"center"}}>{g.team_a?.seed}</span>
-                <span style={{fontSize:15,fontWeight:600,color:g.status==="final"&&g.winner_id===g.team_a?.id?C.green:C.cream,fontFamily:"'Cormorant Garamond', serif",flex:1}}>{g.team_a?.name} {g.status==="final"?g.team_a_score:""}</span>
+                <span style={{fontSize:17,fontWeight:600,color:g.status==="final"&&g.winner_id===g.team_a?.id?C.green:C.cream,fontFamily:"'Cormorant Garamond', serif",flex:1}}>{g.team_a?.name} {g.status==="final"?g.team_a_score:""}</span>
                 <span style={{fontSize:11,color:C.creamSubtle,fontFamily:"'Cormorant Garamond'",fontStyle:"italic",padding:"0 6px"}}>vs</span>
-                <span style={{fontSize:15,fontWeight:600,color:g.status==="final"&&g.winner_id===g.team_b?.id?C.green:C.cream,fontFamily:"'Cormorant Garamond', serif",flex:1,textAlign:"right"}}>{g.status==="final"?g.team_b_score:""} {g.team_b?.name}</span>
+                <span style={{fontSize:17,fontWeight:600,color:g.status==="final"&&g.winner_id===g.team_b?.id?C.green:C.cream,fontFamily:"'Cormorant Garamond', serif",flex:1,textAlign:"right"}}>{g.status==="final"?g.team_b_score:""} {g.team_b?.name}</span>
                 <span style={{fontSize:12,fontWeight:700,color:C.gold,fontFamily:"'Raleway'",width:22,textAlign:"center"}}>{g.team_b?.seed}</span>
               </div>
               {g.status==="final"&&<div style={{marginTop:6,textAlign:"center",fontSize:10,color:C.green,fontFamily:"'Raleway'",fontWeight:600}}>FINAL</div>}
@@ -541,7 +569,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
     <div style={{paddingBottom:100}}>
       <div style={{padding:"52px 24px 12px"}}>
         <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-        <h1 style={{fontSize:24,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>League & Profile</h1>
+        <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>League & Profile</h1>
       </div>
       <div style={{padding:"0 24px"}}>
         <GoldDiv/>
@@ -551,12 +579,12 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
             {l:"League",v:"Barry's Survivor Pool"},
             {l:"Competition",v:"Sweet 16 Survivor"},
             {l:"Format",v:"1 entry, straight-up wins"},
-            {l:"Points",v:`${PTS_PER_WIN} per win this round`},
+            {l:"Points",v:`$Pts increase each round (3→4→5→6)`},
             {l:"Entry Fee",v:"$20"},
           ].map((item,i)=>(
             <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px",borderBottom:i<4?`1px solid ${C.border}`:"none"}}>
-              <span style={{fontWeight:500,fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>{item.l}</span>
-              <span style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Raleway'"}}>{item.v}</span>
+              <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>{item.l}</span>
+              <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>{item.v}</span>
             </div>
           ))}
         </div>
@@ -642,7 +670,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-            <h1 style={{fontSize:26,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Welcome, {displayName}</h1>
+            <h1 style={{fontSize:30,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Welcome, {displayName}</h1>
             <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>Choose a competition</div>
           </div>
           <HexLogo size={50}/>
@@ -671,9 +699,9 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
                   <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
                     <span style={{fontSize:28}}>{c.icon}</span>
                     <div>
-                      <div style={{fontSize:16,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif"}}>{c.name}</div>
+                      <div style={{fontSize:20,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif"}}>{c.name}</div>
 
-                      <div style={{fontSize:11,color:C.creamMuted,fontFamily:"'Raleway'",marginTop:6,lineHeight:1.4}}>{c.desc}</div>
+                      <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",marginTop:6,lineHeight:1.5}}>{c.desc}</div>
                     </div>
                   </div>
                   <div style={{textAlign:"right",flexShrink:0}}>
@@ -769,14 +797,14 @@ export default function BarryBets() {
     </div>
   );
 
-  if (!entry) return <div style={app}><div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",color:C.textMid}}>No entry found. Contact Will.</div></div>;
+  if (!entry) return <div style={app}><div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",color:C.textMid}}>No entry found for this competition. Contact Will to get set up.</div></div>;
 
   return (
     <div style={app}>
       {/* Back to competitions header */}
-      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"6px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
-        <button onClick={()=>{setSelectedCompetition(null);setTab("picks");}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:10,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"←"} COMPETITIONS</button>
-        <span style={{fontSize:11,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Sweet 16 Survivor</span>
+      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
+        <button onClick={()=>{setSelectedCompetition(null);setTab("picks");}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"←"} COMPETITIONS</button>
+        <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Survivor Pool</span>
       </div>
       {tab==="picks"&&<PicksScreen user={user} entry={entry} displayName={displayName}/>}
       {tab==="standings"&&<StandingsScreen/>}
