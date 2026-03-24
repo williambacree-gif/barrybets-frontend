@@ -395,7 +395,8 @@ const StandingsScreen = () => {
           ))}
         </div>
 
-        {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading...</div> : (
+        {loading && <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading...</div>}
+        {!loading && (
           <div>
             <Label>All Entries ({sorted.length})</Label>
             <div style={{background:C.navyLight,borderRadius:C.r,border:`1px solid ${C.border}`,overflow:"hidden"}}>
@@ -629,6 +630,12 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
     })();
   }, [user]);
 
+  if (loading) return (
+    <div style={{minHeight:"100vh",background:C.pageBg,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{color:C.textMid,fontSize:14,fontFamily:"'Raleway'"}}>Loading competitions...</div>
+    </div>
+  );
+
   return (
     <div style={{minHeight:"100vh",background:C.pageBg,paddingBottom:40}}>
       <div style={{padding:"52px 24px 12px"}}>
@@ -644,14 +651,14 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
       <div style={{padding:"0 24px"}}>
         <GoldDiv/>
         <div style={{marginTop:20}}>
-          {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading competitions...</div> : <div>
-          {competitions.length === 0 ? (
+          {competitions.length === 0 && (
             <div style={{textAlign:"center",padding:"40px 20px"}}>
               <div style={{fontSize:40,marginBottom:12}}>🏆</div>
               <div style={{fontSize:16,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>No competitions yet</div>
               <div style={{fontSize:12,color:C.creamSubtle,fontFamily:"'Raleway'"}}>Check back soon or ask Will for an invite code.</div>
             </div>
-          ) : <Label>Your Competitions ({competitions.length})</Label>}
+          )}
+          {competitions.length > 0 && <Label>Your Competitions ({competitions.length})</Label>}
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {competitions.map(c => (
               <button key={c.id} onClick={()=>c.status==="active"&&onSelect(c.id)} disabled={c.status==="coming_soon"} style={{
@@ -684,8 +691,6 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
             ))}
           </div>
         </div>
-
-        </div>}
         {/* Profile quick actions */}
         <div style={{marginTop:32,display:"flex",gap:10}}>
           <button onClick={onLogout} style={{flex:1,padding:"12px",borderRadius:C.rSm,border:"1.5px solid "+C.border,background:"transparent",color:C.creamMuted,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'",letterSpacing:"0.05em"}}>SIGN OUT</button>
