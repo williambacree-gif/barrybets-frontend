@@ -78,7 +78,7 @@ const Label = ({children}) => (
 
 const TabBar = ({active,onChange}) => (
   <nav style={{display:"flex",justifyContent:"space-around",alignItems:"center",position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(18,22,31,0.95)",backdropFilter:"blur(20px)",borderTop:`1px solid ${C.border}`,padding:"8px 0 28px",zIndex:100}}>
-    {[{id:"picks",label:"PICKS"},{id:"standings",label:"STANDINGS"},{id:"bracket",label:"BRACKET"},{id:"league",label:"LEAGUE"}].map(t=>(
+    {[{id:"picks",label:"PICKS"},{id:"standings",label:"STANDINGS"},{id:"bracket",label:"BRACKET"},{id:"profile",label:"PROFILE"}].map(t=>(
       <button key={t.id} onClick={()=>onChange(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 16px",border:"none",background:"none",cursor:"pointer",color:active===t.id?C.gold:C.creamSubtle,fontSize:10,fontWeight:600,letterSpacing:"0.12em",fontFamily:"'Raleway'",transition:"color 0.3s"}}>
         <span>{t.label}</span>
       </button>
@@ -228,28 +228,33 @@ const PicksScreen = ({user,entry,displayName}) => {
   const [saving,setSaving]=useState(false);
   const [currentRound,setCurrentRound]=useState(3);
   const [roundDates,setRoundDates]=useState([]);
+  const [initialized,setInitialized]=useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Detect current active round (highest round with games)
+  // Step 1: On mount, detect current round and dates (runs once)
+  useEffect(() => {
+    (async () => {
       const {data:allGames} = await supabase.from("games")
         .select("round, game_date, status")
         .eq("tournament_id", TID).order("round", {ascending: false});
-      
       if (allGames && allGames.length > 0) {
         const maxRound = allGames[0].round;
         setCurrentRound(maxRound);
         const rDates = [...new Set(allGames.filter(g => g.round === maxRound).map(g => g.game_date))].sort();
         setRoundDates(rDates);
-        if (!dayFilter || !rDates.includes(dayFilter)) setDayFilter(rDates[0] || "");
+        setDayFilter(rDates[0] || "");
       }
+      setInitialized(true);
+    })();
+  }, []);
 
-      // Load games for the selected day
-      const filterDate = dayFilter || (roundDates[0] || "2026-03-26");
+  // Step 2: When dayFilter changes (and is initialized), load games
+  const loadGames = useCallback(async () => {
+    if (!initialized || !dayFilter) return;
+    setLoading(true);
+    try {
       const {data:gamesData} = await supabase.from("games")
         .select("*, team_a:teams!games_team_a_id_fkey(id,name,seed,region), team_b:teams!games_team_b_id_fkey(id,name,seed,region)")
-        .eq("tournament_id", TID).eq("game_date", filterDate);
+        .eq("tournament_id", TID).eq("game_date", dayFilter);
       const sorted = (gamesData||[]).sort(sortByTipTime);
       setGames(sorted);
 
@@ -266,9 +271,9 @@ const PicksScreen = ({user,entry,displayName}) => {
       }
     } catch(err) { console.error("Load error:", err); }
     setLoading(false);
-  }, [dayFilter, entry, roundDates]);
+  }, [dayFilter, entry, initialized]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadGames(); }, [loadGames]);
 
   const handlePick = async (gameId, teamId) => {
     if (!entry || entry.status !== "alive") return;
@@ -279,7 +284,7 @@ const PicksScreen = ({user,entry,displayName}) => {
       // Insert new pick
       await supabase.from("picks").insert({
         entry_id: entry.id, game_id: gameId, team_id: teamId,
-        round: currentRound, pick_date: dayFilter || roundDates[0], result: "pending"
+        round: currentRound, pick_date: dayFilter, result: "pending"
       });
       setPicks(prev => ({...prev, [gameId]: teamId}));
     } catch(err) { alert(err.message); }
@@ -544,6 +549,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
   const [pwMsg,setPwMsg]=useState("");
   const [newName,setNewName]=useState(displayName);
   const [nameMsg,setNameMsg]=useState("");
+  const [activeSection,setActiveSection]=useState("profile");
 
   const handleChangePassword = async () => {
     if (newPassword.length < 6) { setPwMsg("Password must be at least 6 characters"); return; }
@@ -587,32 +593,39 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
               <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>{item.v}</span>
             </div>
           ))}
-        </div>
-
-        {/* Change Display Name */}
-        <div style={{marginTop:24}}>
-          <Label>Display Name</Label>
-          <div style={{background:C.navyLight,borderRadius:C.r,border:`1px solid ${C.border}`,padding:"16px"}}>
-            <input value={newName} onChange={e=>setNewName(e.target.value)} style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:`1px solid ${C.border}`,background:C.navyDark,color:C.cream,fontSize:14,fontFamily:"'Raleway'",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
-            {nameMsg && <div style={{color:nameMsg.includes("updated")?C.green:C.red,fontSize:11,fontFamily:"'Raleway'",marginBottom:8}}>{nameMsg}</div>}
-            <button onClick={handleChangeName} style={{width:"100%",padding:"10px",borderRadius:C.rSm,border:"none",background:C.gold,color:C.navyDark,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'"}}>UPDATE NAME</button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Change Password */}
-        <div style={{marginTop:24}}>
-          <Label>Change Password</Label>
-          <div style={{background:C.navyLight,borderRadius:C.r,border:`1px solid ${C.border}`,padding:"16px"}}>
-            <input value={newPassword} onChange={e=>setNewPassword(e.target.value)} type="password" placeholder="New password" style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:`1px solid ${C.border}`,background:C.navyDark,color:C.cream,fontSize:14,fontFamily:"'Raleway'",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
-            <input value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} type="password" placeholder="Confirm new password" style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:`1px solid ${C.border}`,background:C.navyDark,color:C.cream,fontSize:14,fontFamily:"'Raleway'",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
-            {pwMsg && <div style={{color:pwMsg.includes("updated")?C.green:C.red,fontSize:11,fontFamily:"'Raleway'",marginBottom:8}}>{pwMsg}</div>}
-            <button onClick={handleChangePassword} style={{width:"100%",padding:"10px",borderRadius:C.rSm,border:"none",background:C.gold,color:C.navyDark,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'"}}>CHANGE PASSWORD</button>
+        {/* ── NOTIFICATIONS SECTION ── */}
+        {activeSection==="notifications" && (
+          <div>
+            <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px",marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>Pick Reminders</div>
+              <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,marginBottom:16}}>Get notified when your picks are due so you never miss a deadline.</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+                <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Email reminders</span>
+                <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+                <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Push notifications</span>
+                <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+              </div>
+            </div>
+            <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px"}}>
+              <div style={{fontSize:15,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>Results & Scores</div>
+              <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,marginBottom:16}}>Get notified when games finish and scores are updated.</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+                <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Score alerts</span>
+                <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Sign Out */}
         <div style={{marginTop:24}}>
-          <button onClick={onLogout} style={{width:"100%",padding:"14px",borderRadius:C.rSm,border:`1.5px solid ${C.red}`,background:"transparent",color:C.red,fontSize:12,fontWeight:600,letterSpacing:"0.1em",cursor:"pointer",fontFamily:"'Raleway'"}}>SIGN OUT</button>
+          <button onClick={onLogout} style={{width:"100%",padding:"14px",borderRadius:C.rSm,border:"1.5px solid "+C.red,background:"transparent",color:C.red,fontSize:13,fontWeight:600,letterSpacing:"0.1em",cursor:"pointer",fontFamily:"'Raleway'"}}>SIGN OUT</button>
         </div>
 
         <div style={{textAlign:"center",marginTop:32,marginBottom:20}}>
@@ -809,7 +822,7 @@ export default function BarryBets() {
       {tab==="picks"&&<PicksScreen user={user} entry={entry} displayName={displayName}/>}
       {tab==="standings"&&<StandingsScreen/>}
       {tab==="bracket"&&<BracketScreen/>}
-      {tab==="league"&&<LeagueScreen user={user} displayName={displayName} onLogout={handleLogout}/>}
+      {tab==="profile"&&<LeagueScreen user={user} displayName={displayName} onLogout={handleLogout}/>}
       <TabBar active={tab} onChange={setTab}/>
     </div>
   );
