@@ -340,7 +340,7 @@ const PicksScreen = ({user,entry,displayName}) => {
 
         <div style={{marginTop:12,background:"#232838",borderRadius:C.r,padding:"14px",border:`1px solid ${C.border}`}}>
           <div style={{fontSize:10,fontWeight:600,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",marginBottom:4}}>SURVIVOR RULES</div>
-          <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.6}}>Pick 1 winner per day. Straight-up wins only. If your team wins, you survive + earn {PTS_PER_WIN} points. If they lose, you're out. Can't reuse a team.</div>
+          <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.6}}>Pick 1 winner per day. Straight-up wins only. Points per correct pick: Sweet 16 (3), Elite 8 (4), Final Four (5), Championship (6). If your team loses, you're eliminated.</div>
         </div>
       </div>
     </div>
