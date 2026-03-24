@@ -138,7 +138,7 @@ const LoginScreen = ({onLogin}) => {
           <button onClick={()=>setShowReset(true)} style={{background:"none",border:"none",color:C.gold,fontSize:11,cursor:"pointer",fontFamily:"'Raleway'",letterSpacing:"0.05em"}}>Forgot password?</button>
         </div>
       </div>
-      <p style={{color:C.creamSubtle,fontSize:12,textAlign:"center",marginTop:24,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"\u2026"}to keep Blair out</p>
+      <p style={{color:C.creamSubtle,fontSize:12,textAlign:"center",marginTop:24,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"…"}to keep Blair out</p>
     </div>
   );
 };
@@ -167,9 +167,9 @@ const GameCard = ({game,myPick,onPick,usedTeams=[],entryStatus}) => {
     let label = null;
 
     if (isPicked && isFinal && isWinner) {
-      bg = C.greenBg; border = `2px solid ${C.green}`; textColor = C.green; label = "\u2713 WIN";
+      bg = C.greenBg; border = `2px solid ${C.green}`; textColor = C.green; label = "✓ WIN";
     } else if (isPicked && isFinal && isLoser) {
-      bg = C.redBg; border = `2px solid ${C.red}`; textColor = C.red; label = "\u2717 LOSS";
+      bg = C.redBg; border = `2px solid ${C.red}`; textColor = C.red; label = "✗ LOSS";
     } else if (isPicked) {
       bg = C.goldSubtle; border = `2px solid ${C.gold}`; textColor = C.goldLight; label = "YOUR PICK";
     } else if (isUsed) {
@@ -276,7 +276,7 @@ const PicksScreen = ({user,entry,displayName}) => {
           <div>
             <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
             <h1 style={{fontSize:24,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Sweet 16 Survivor</h1>
-            <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>{displayName} {"\u00B7"} {entry?.status==="alive"?"ALIVE":"ELIMINATED"}</div>
+            <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>{displayName} {"·"} {entry?.status==="alive"?"ALIVE":"ELIMINATED"}</div>
           </div>
           <HexLogo size={44}/>
         </div>
@@ -621,7 +621,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
           name: l.name || "Unnamed Competition",
           league: "Barry\'s Crew",
           status: enrolledLeagueIds.has(l.id) ? "active" : "active",
-          icon: "\u{1F3C0}",
+          icon: "🏀",
           desc: "Pick 1 winner per day. Survive or go home.",
           date: "Mar 26-27",
         }));
@@ -650,7 +650,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
           {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading competitions...</div> : <>
           {competitions.length === 0 ? (
             <div style={{textAlign:"center",padding:"40px 20px"}}>
-              <div style={{fontSize:40,marginBottom:12}}>\u{1F3C6}</div>
+              <div style={{fontSize:40,marginBottom:12}}>🏆</div>
               <div style={{fontSize:16,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>No competitions yet</div>
               <div style={{fontSize:12,color:C.creamSubtle,fontFamily:"'Raleway'"}}>Check back soon or ask Will for an invite code.</div>
             </div>
@@ -695,7 +695,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
         </div>
 
         <div style={{textAlign:"center",marginTop:32}}>
-          <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"\u2026"}to keep Blair out</p>
+          <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"…"}to keep Blair out</p>
           <div style={{color:C.creamSubtle,fontSize:10,fontFamily:"'Raleway'",letterSpacing:"0.15em",marginTop:12}}>barrysbets.net</div>
         </div>
       </div>
@@ -773,7 +773,7 @@ export default function BarryBets() {
     <div style={app}>
       {/* Back to competitions header */}
       <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"6px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
-        <button onClick={()=>{setSelectedCompetition(null);setTab("picks");}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:10,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"\u2190"} COMPETITIONS</button>
+        <button onClick={()=>{setSelectedCompetition(null);setTab("picks");}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:10,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"←"} COMPETITIONS</button>
         <span style={{fontSize:11,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Sweet 16 Survivor</span>
       </div>
       {tab==="picks"&&<PicksScreen user={user} entry={entry} displayName={displayName}/>}
