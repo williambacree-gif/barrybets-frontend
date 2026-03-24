@@ -396,7 +396,7 @@ const StandingsScreen = () => {
         </div>
 
         {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading...</div> : (
-          <>
+          <div>
             <Label>All Entries ({sorted.length})</Label>
             <div style={{background:C.navyLight,borderRadius:C.r,border:`1px solid ${C.border}`,overflow:"hidden"}}>
               {sorted.map((e,i)=>{
@@ -448,7 +448,7 @@ const StandingsScreen = () => {
                 );
               })}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -603,17 +603,14 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
   useEffect(() => {
     (async () => {
       try {
-        // Get leagues user is a member of
-        const {data:memberships} = await supabase.from("league_members").select("league_id").eq("user_id", user.id);
-        if (!memberships || memberships.length === 0) { setLoading(false); return; }
-        const leagueIds = memberships.map(m => m.league_id);
+        // Get leagues user has entries in
+        const {data:entries} = await supabase.from("entries").select("league_id").eq("user_id", user.id);
+        if (!entries || entries.length === 0) { setLoading(false); return; }
+        const leagueIds = [...new Set(entries.map(e => e.league_id))];
+        const enrolledLeagueIds = new Set(leagueIds);
 
         // Get league details
         const {data:leagues} = await supabase.from("leagues").select("*").in("id", leagueIds);
-
-        // Check if user has entries (meaning they're enrolled in the competition)
-        const {data:entries} = await supabase.from("entries").select("league_id").eq("user_id", user.id);
-        const enrolledLeagueIds = new Set((entries||[]).map(e => e.league_id));
 
         // Build competition cards from leagues
         const comps = (leagues||[]).map(l => ({
@@ -647,7 +644,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
       <div style={{padding:"0 24px"}}>
         <GoldDiv/>
         <div style={{marginTop:20}}>
-          {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading competitions...</div> : <>
+          {loading ? <div style={{textAlign:"center",padding:40,color:C.textMid}}>Loading competitions...</div> : <div>
           {competitions.length === 0 ? (
             <div style={{textAlign:"center",padding:"40px 20px"}}>
               <div style={{fontSize:40,marginBottom:12}}>🏆</div>
@@ -688,7 +685,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
           </div>
         </div>
 
-        </>}
+        </div>}
         {/* Profile quick actions */}
         <div style={{marginTop:32,display:"flex",gap:10}}>
           <button onClick={onLogout} style={{flex:1,padding:"12px",borderRadius:C.rSm,border:"1.5px solid "+C.border,background:"transparent",color:C.creamMuted,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'",letterSpacing:"0.05em"}}>SIGN OUT</button>
