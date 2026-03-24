@@ -571,63 +571,107 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
     } catch(err) { setNameMsg(err.message); }
   };
 
+  const renderProfile = () => (
+    <div>
+      <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,overflow:"hidden",marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid "+C.border}}>
+          <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Email</span>
+          <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>{user.email||""}</span>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid "+C.border}}>
+          <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Display Name</span>
+          <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>{displayName}</span>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px"}}>
+          <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Member Since</span>
+          <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>{new Date(user.created_at||"").toLocaleDateString("en-US",{month:"long",year:"numeric"})}</span>
+        </div>
+      </div>
+      <Label>Update Display Name</Label>
+      <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"16px",marginBottom:20}}>
+        <input value={newName} onChange={e=>setNewName(e.target.value)} style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:"1px solid "+C.border,background:C.navyDark,color:C.cream,fontSize:14,fontFamily:"'Raleway'",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+        {nameMsg && <div style={{color:nameMsg.includes("updated")?C.green:C.red,fontSize:12,fontFamily:"'Raleway'",marginBottom:8}}>{nameMsg}</div>}
+        <button onClick={handleChangeName} style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:"none",background:C.gold,color:C.navyDark,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'"}}>UPDATE NAME</button>
+      </div>
+      <Label>Change Password</Label>
+      <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"16px",marginBottom:20}}>
+        <input value={newPassword} onChange={e=>setNewPassword(e.target.value)} type="password" placeholder="New password" style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:"1px solid "+C.border,background:C.navyDark,color:C.cream,fontSize:14,fontFamily:"'Raleway'",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+        <input value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} type="password" placeholder="Confirm new password" style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:"1px solid "+C.border,background:C.navyDark,color:C.cream,fontSize:14,fontFamily:"'Raleway'",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+        {pwMsg && <div style={{color:pwMsg.includes("updated")?C.green:C.red,fontSize:12,fontFamily:"'Raleway'",marginBottom:8}}>{pwMsg}</div>}
+        <button onClick={handleChangePassword} style={{width:"100%",padding:"12px",borderRadius:C.rSm,border:"none",background:C.gold,color:C.navyDark,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'"}}>CHANGE PASSWORD</button>
+      </div>
+    </div>
+  );
+
+  const renderLeagueInfo = () => (
+    <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,overflow:"hidden"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid "+C.border}}>
+        <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>League</span>
+        <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>Barry&#39;s Survivor Pool</span>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid "+C.border}}>
+        <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Competition</span>
+        <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>March Madness Survivor</span>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid "+C.border}}>
+        <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Format</span>
+        <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>1 entry, straight-up wins</span>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",borderBottom:"1px solid "+C.border}}>
+        <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Points</span>
+        <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>3 (S16) / 4 (E8) / 5 (F4) / 6 (C)</span>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px"}}>
+        <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>Entry Fee</span>
+        <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>$20</span>
+      </div>
+    </div>
+  );
+
+  const renderNotifications = () => (
+    <div>
+      <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px",marginBottom:16}}>
+        <div style={{fontSize:15,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>Pick Reminders</div>
+        <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,marginBottom:16}}>Get notified when your picks are due so you never miss a deadline.</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+          <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Email reminders</span>
+          <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+          <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Push notifications</span>
+          <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+        </div>
+      </div>
+      <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px"}}>
+        <div style={{fontSize:15,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>Results and Scores</div>
+        <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,marginBottom:16}}>Get notified when games finish and scores are updated.</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+          <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Score alerts</span>
+          <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const sectionContent = activeSection==="profile" ? renderProfile() : activeSection==="league" ? renderLeagueInfo() : renderNotifications();
+
   return (
     <div style={{paddingBottom:100}}>
       <div style={{padding:"52px 24px 12px"}}>
         <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-        <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>League & Profile</h1>
+        <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Profile and Settings</h1>
       </div>
       <div style={{padding:"0 24px"}}>
         <GoldDiv/>
-        {/* League Info */}
-        <div style={{marginTop:16,background:C.navyLight,borderRadius:C.r,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-          {[
-            {l:"League",v:"Barry's Survivor Pool"},
-            {l:"Competition",v:"Sweet 16 Survivor"},
-            {l:"Format",v:"1 entry, straight-up wins"},
-            {l:"Points",v:`$Pts increase each round (3→4→5→6)`},
-            {l:"Entry Fee",v:"$20"},
-          ].map((item,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px",borderBottom:i<4?`1px solid ${C.border}`:"none"}}>
-              <span style={{fontWeight:500,fontSize:14,color:C.cream,fontFamily:"'Raleway'"}}>{item.l}</span>
-              <span style={{color:C.creamSubtle,fontSize:13,fontFamily:"'Raleway'"}}>{item.v}</span>
-            </div>
-          ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── NOTIFICATIONS SECTION ── */}
-        {activeSection==="notifications" && (
-          <div>
-            <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px",marginBottom:16}}>
-              <div style={{fontSize:15,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>Pick Reminders</div>
-              <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,marginBottom:16}}>Get notified when your picks are due so you never miss a deadline.</div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
-                <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Email reminders</span>
-                <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
-              </div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
-                <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Push notifications</span>
-                <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
-              </div>
-            </div>
-            <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px"}}>
-              <div style={{fontSize:15,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>Results & Scores</div>
-              <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,marginBottom:16}}>Get notified when games finish and scores are updated.</div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
-                <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Score alerts</span>
-                <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sign Out */}
+        <div style={{display:"flex",gap:8,marginTop:16,marginBottom:20}}>
+          <button onClick={()=>setActiveSection("profile")} style={{padding:"8px 16px",borderRadius:20,background:activeSection==="profile"?C.gold:C.navyLight,color:activeSection==="profile"?C.navyDark:C.cream,border:activeSection==="profile"?"none":"1px solid "+C.border,cursor:"pointer",fontFamily:"'Raleway'",fontSize:12,fontWeight:600}}>My Profile</button>
+          <button onClick={()=>setActiveSection("league")} style={{padding:"8px 16px",borderRadius:20,background:activeSection==="league"?C.gold:C.navyLight,color:activeSection==="league"?C.navyDark:C.cream,border:activeSection==="league"?"none":"1px solid "+C.border,cursor:"pointer",fontFamily:"'Raleway'",fontSize:12,fontWeight:600}}>League Info</button>
+          <button onClick={()=>setActiveSection("notifications")} style={{padding:"8px 16px",borderRadius:20,background:activeSection==="notifications"?C.gold:C.navyLight,color:activeSection==="notifications"?C.navyDark:C.cream,border:activeSection==="notifications"?"none":"1px solid "+C.border,cursor:"pointer",fontFamily:"'Raleway'",fontSize:12,fontWeight:600}}>Notifications</button>
+        </div>
+        {sectionContent}
         <div style={{marginTop:24}}>
           <button onClick={onLogout} style={{width:"100%",padding:"14px",borderRadius:C.rSm,border:"1.5px solid "+C.red,background:"transparent",color:C.red,fontSize:13,fontWeight:600,letterSpacing:"0.1em",cursor:"pointer",fontFamily:"'Raleway'"}}>SIGN OUT</button>
         </div>
-
         <div style={{textAlign:"center",marginTop:32,marginBottom:20}}>
           <div style={{color:C.creamSubtle,fontSize:10,fontFamily:"'Raleway'",letterSpacing:"0.15em"}}>barrysbets.net</div>
         </div>
