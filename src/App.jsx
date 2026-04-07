@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
+import MastersPool from './MastersPool';
 
 // ─── Supabase Client ─────────────────────────────────────────
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -78,7 +79,7 @@ const Label = ({children}) => (
 
 const TabBar = ({active,onChange}) => (
   <nav style={{display:"flex",justifyContent:"space-around",alignItems:"center",position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(18,22,31,0.95)",backdropFilter:"blur(20px)",borderTop:`1px solid ${C.border}`,padding:"8px 0 28px",zIndex:100}}>
-    {[{id:"picks",label:"PICKS"},{id:"standings",label:"STANDINGS"},{id:"bracket",label:"BRACKET"},{id:"profile",label:"PROFILE"}].map(t=>(
+    {[{id:"picks",label:"PICKS"},{id:"standings",label:"STANDINGS"},{id:"bracket",label:"BRACKET"},{id:"masters",label:"MASTERS"},{id:"profile",label:"PROFILE"}].map(t=>(
       <button key={t.id} onClick={()=>onChange(t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"6px 16px",border:"none",background:"none",cursor:"pointer",color:active===t.id?C.gold:C.creamSubtle,fontSize:10,fontWeight:600,letterSpacing:"0.12em",fontFamily:"'Raleway'",transition:"color 0.3s"}}>
         <span>{t.label}</span>
       </button>
@@ -867,6 +868,7 @@ export default function BarryBets() {
       {tab==="standings"&&<StandingsScreen/>}
       {tab==="bracket"&&<BracketScreen/>}
       {tab==="profile"&&<LeagueScreen user={user} displayName={displayName} onLogout={handleLogout}/>}
+          {tab==="masters"&&<MastersPool userId={user?.id} leagueId={LEAGUE_ID} userName={displayName}/>}
       <TabBar active={tab} onChange={setTab}/>
     </div>
   );
