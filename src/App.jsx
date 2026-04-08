@@ -683,7 +683,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 
 // ─── Competition Selector (Landing Page) ─────────────────────
-const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
+const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => {
   const [competitions,setCompetitions] = useState([]);
   const [loading,setLoading] = useState(true);
 
@@ -744,7 +744,20 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout}) => {
               <div style={{fontSize:12,color:C.creamSubtle,fontFamily:"'Raleway'"}}>Check back soon or ask Will for an invite code.</div>
             </div>
           )}
-          {competitions.length > 0 && <Label>Your Competitions ({competitions.length})</Label>}
+          <Label>Active Pools</Label>
+          <button onClick={()=>onMasters&&onMasters()} style={{padding:"20px",borderRadius:C.r,textAlign:"left",cursor:"pointer",background:"linear-gradient(135deg, #0a5c36 0%, #1a3c6d 100%)",border:"1.5px solid #c9b037",transition:"all 0.25s",marginBottom:12,width:"100%"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                <span style={{fontSize:28}}>\u26f3</span>
+                <div>
+                  <div style={{fontSize:20,fontWeight:600,color:"#fff",fontFamily:"'Cormorant Garamond', serif"}}>Masters 2026 Pool</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,0.7)",fontFamily:"'Raleway'",marginTop:4}}>Tiered Pick 6 \u2022 Use Best 4 \u2022 $20 entry</div>
+                </div>
+              </div>
+              <div style={{textAlign:"right"}}><Badge color="#c9b037" bg="rgba(201,176,55,0.2)">OPEN</Badge><div style={{fontSize:10,color:"rgba(255,255,255,0.5)",fontFamily:"'Raleway'",marginTop:4}}>Apr 9-12</div></div>
+            </div>
+          </button>
+          {competitions.length > 0 && <Label>Past Competitions</Label>}
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {competitions.map(c => (
               <button key={c.id} onClick={()=>c.status==="active"&&onSelect(c.id)} disabled={c.status==="coming_soon"} style={{
@@ -851,7 +864,7 @@ export default function BarryBets() {
   if (!user) return <div style={app}><LoginScreen onLogin={handleLogin}/></div>;
   if (!selectedCompetition && tab !== "masters" && tab !== "profile") return (
     <div style={app}>
-      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout}/>
+      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMasters={()=>{setTab("masters");setSelectedCompetition("masters");}}/>
     </div>
   );
 
