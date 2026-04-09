@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import MastersPool from './MastersPool';
 
-// âââ Supabase Client âââââââââââââââââââââââââââââââââââââââââ
+// ─── Supabase Client ─────────────────────────────────────────
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// âââ Constants âââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Constants ───────────────────────────────────────────────
 const TID = "00000000-0000-0000-0000-000000002026";
 const LEAGUE_ID = "a0000000-0000-0000-0000-000000000001";
 // Round config - points increase each round
@@ -29,7 +29,7 @@ const C = {
   r:12,rSm:8,
 };
 
-// âââ Time Helpers ââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Time Helpers ────────────────────────────────────────────
 function parseGameTime(timeStr, dateStr) {
   if (!timeStr || !dateStr) return null;
   const m = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -50,7 +50,7 @@ function sortByTipTime(a, b) {
   return (tA || 0) - (tB || 0);
 }
 
-// âââ Shared UI Components ââââââââââââââââââââââââââââââââââââ
+// ─── Shared UI Components ────────────────────────────────────
 const HexLogo = ({size=80,dark=false}) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
     <polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" stroke={dark?C.gold:C.navy} strokeWidth="2" fill="none"/>
@@ -87,7 +87,7 @@ const TabBar = ({active,onChange}) => (
   </nav>
 );
 
-// âââ Login Screen ââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Login Screen ────────────────────────────────────────────
 const LoginScreen = ({onLogin}) => {
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
@@ -144,12 +144,12 @@ const LoginScreen = ({onLogin}) => {
           <button onClick={()=>setShowReset(true)} style={{background:"none",border:"none",color:C.gold,fontSize:11,cursor:"pointer",fontFamily:"'Raleway'",letterSpacing:"0.05em"}}>Forgot password?</button>
         </div>
       </div>
-      <p style={{color:C.creamSubtle,fontSize:12,textAlign:"center",marginTop:24,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"â¦"}to keep Blair out</p>
+      <p style={{color:C.creamSubtle,fontSize:12,textAlign:"center",marginTop:24,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"…"}to keep Blair out</p>
     </div>
   );
 };
 
-// âââ Game Card âââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Game Card ───────────────────────────────────────────────
 const GameCard = ({game,myPick,onPick,usedTeams=[],entryStatus}) => {
   const tA = game.team_a;
   const tB = game.team_b;
@@ -173,9 +173,9 @@ const GameCard = ({game,myPick,onPick,usedTeams=[],entryStatus}) => {
     let label = null;
 
     if (isPicked && isFinal && isWinner) {
-      bg = C.greenBg; border = `2px solid ${C.green}`; textColor = C.green; label = "â WIN";
+      bg = C.greenBg; border = `2px solid ${C.green}`; textColor = C.green; label = "✓ WIN";
     } else if (isPicked && isFinal && isLoser) {
-      bg = C.redBg; border = `2px solid ${C.red}`; textColor = C.red; label = "â LOSS";
+      bg = C.redBg; border = `2px solid ${C.red}`; textColor = C.red; label = "✗ LOSS";
     } else if (isPicked) {
       bg = C.goldSubtle; border = `2px solid ${C.gold}`; textColor = C.goldLight; label = "YOUR PICK";
     } else if (isUsed) {
@@ -219,7 +219,7 @@ const GameCard = ({game,myPick,onPick,usedTeams=[],entryStatus}) => {
   );
 };
 
-// âââ Picks Screen ââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Picks Screen ────────────────────────────────────────────
 const PicksScreen = ({user,entry,displayName}) => {
   const [games,setGames]=useState([]);
   const [picks,setPicks]=useState({}); // {gameId: teamId}
@@ -266,7 +266,7 @@ const PicksScreen = ({user,entry,displayName}) => {
         (picksData||[]).forEach(p => { pMap[p.game_id] = p.team_id; });
         setPicks(pMap);
 
-        // Load used teams (from previous rounds only â not current round picks)
+        // Load used teams (from previous rounds only — not current round picks)
         const {data:usedData} = await supabase.from("used_teams").select("team_id").eq("entry_id", entry.id);
         setUsedTeamIds((usedData||[]).map(u => u.team_id));
       }
@@ -304,7 +304,7 @@ const PicksScreen = ({user,entry,displayName}) => {
           <div>
             <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
             <h1 style={{fontSize:28,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>{(ROUND_CONFIG[currentRound]||{name:'Survivor'}).name} Survivor</h1>
-            <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>{displayName} {"Â·"} {entry?.status==="alive"?"ALIVE":"ELIMINATED"}</div>
+            <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>{displayName} {"·"} {entry?.status==="alive"?"ALIVE":"ELIMINATED"}</div>
           </div>
           <HexLogo size={44}/>
         </div>
@@ -333,7 +333,7 @@ const PicksScreen = ({user,entry,displayName}) => {
           </div>
         ) : (
           <div style={{background:C.navyDark,border:`1px solid ${C.border}`,borderRadius:C.r,padding:"12px 16px",marginBottom:14}}>
-            <div style={{fontWeight:600,fontSize:11,color:C.gold,fontFamily:"'Raleway'"}}>PICK A WINNER â {(ROUND_CONFIG[currentRound]||{pts:3}).pts} points if correct</div>
+            <div style={{fontWeight:600,fontSize:11,color:C.gold,fontFamily:"'Raleway'"}}>PICK A WINNER — {(ROUND_CONFIG[currentRound]||{pts:3}).pts} points if correct</div>
           </div>
         )}
 
@@ -353,7 +353,7 @@ const PicksScreen = ({user,entry,displayName}) => {
   );
 };
 
-// âââ Standings Screen ââââââââââââââââââââââââââââââââââââââââ
+// ─── Standings Screen ────────────────────────────────────────
 const StandingsScreen = () => {
   const [allEntries,setAllEntries]=useState([]);
   const [entryPicks,setEntryPicks]=useState({});
@@ -490,7 +490,7 @@ const StandingsScreen = () => {
   );
 };
 
-// âââ Bracket Screen ââââââââââââââââââââââââââââââââââââââââââ
+// ─── Bracket Screen ──────────────────────────────────────────
 const BracketScreen = () => {
   const [games,setGames]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -543,7 +543,7 @@ const BracketScreen = () => {
   );
 };
 
-// âââ League / Profile Screen âââââââââââââââââââââââââââââââââ
+// ─── League / Profile Screen ─────────────────────────────────
 const LeagueScreen = ({user,displayName,onLogout}) => {
   const [newPassword,setNewPassword]=useState("");
   const [confirmPassword,setConfirmPassword]=useState("");
@@ -682,7 +682,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 };
 
 
-// âââ Competition Selector (Landing Page) âââââââââââââââââââââ
+// ─── Competition Selector (Landing Page) ─────────────────────
 const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => {
   const [competitions,setCompetitions] = useState([]);
   const [loading,setLoading] = useState(true);
@@ -705,7 +705,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => 
           name: l.name || "Unnamed Competition",
           league: "Barry\'s Crew",
           status: enrolledLeagueIds.has(l.id) ? "active" : "active",
-          icon: "ð",
+          icon: "🏀",
           desc: "Pick 1 winner per day. Survive or go home.",
           date: "Mar 26-27",
         }));
@@ -739,7 +739,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => 
         <div style={{marginTop:20}}>
           {competitions.length === 0 && (
             <div style={{textAlign:"center",padding:"40px 20px"}}>
-              <div style={{fontSize:40,marginBottom:12}}>ð</div>
+              <div style={{fontSize:40,marginBottom:12}}>🏆</div>
               <div style={{fontSize:16,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>No competitions yet</div>
               <div style={{fontSize:12,color:C.creamSubtle,fontFamily:"'Raleway'"}}>Check back soon or ask Will for an invite code.</div>
             </div>
@@ -796,7 +796,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => 
         </div>
 
         <div style={{textAlign:"center",marginTop:32}}>
-          <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"â¦"}to keep Blair out</p>
+          <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"…"}to keep Blair out</p>
           <div style={{color:C.creamSubtle,fontSize:10,fontFamily:"'Raleway'",letterSpacing:"0.15em",marginTop:12}}>barrysbets.net</div>
         </div>
       </div>
@@ -804,9 +804,9 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => 
   );
 };
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══════════════════════════════════════════════════════════════
 // MAIN APP
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══════════════════════════════════════════════════════════════
 export default function BarryBets() {
   const [user,setUser]=useState(null);
   const [loading,setLoading]=useState(true);
@@ -871,7 +871,7 @@ export default function BarryBets() {
   if (selectedCompetition === "masters") return (
     <div style={app}>
       <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
-        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"←"} COMPETITIONS</button>
+        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"<"} COMPETITIONS</button>
         <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Masters Pool</span>
       </div>
       <div style={{paddingTop:44}}>
@@ -886,7 +886,7 @@ export default function BarryBets() {
     <div style={app}>
       {/* Back to competitions header */}
       <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
-        <button onClick={()=>{setSelectedCompetition(null);setTab("picks");}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"â"} COMPETITIONS</button>
+        <button onClick={()=>{setSelectedCompetition(null);setTab("picks");}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"←"} COMPETITIONS</button>
         <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Survivor Pool</span>
       </div>
       {tab==="picks"&&<PicksScreen user={user} entry={entry} displayName={displayName}/>}
