@@ -871,7 +871,7 @@ export default function BarryBets() {
   if (selectedCompetition === "masters") return (
     <div style={app}>
       <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
-        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"\u2190"} COMPETITIONS</button>
+        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"←"} COMPETITIONS</button>
         <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Masters Pool</span>
       </div>
       <div style={{paddingTop:44}}>
@@ -893,7 +893,6 @@ export default function BarryBets() {
       {tab==="standings"&&<StandingsScreen/>}
       {tab==="bracket"&&<BracketScreen/>}
       {tab==="profile"&&<LeagueScreen user={user} displayName={displayName} onLogout={handleLogout}/>}
-          {tab==="masters"&&<MastersPool userId={user?.id} leagueId={LEAGUE_ID} userName={displayName}/>}
       <TabBar active={tab} onChange={setTab}/>
     </div>
   );
