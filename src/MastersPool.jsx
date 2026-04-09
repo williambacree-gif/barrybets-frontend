@@ -115,18 +115,6 @@ export default function MastersPool({ userId, leagueId, userName }) {
         ))}
       </div>
 
-      {/* Scoring Rules */}
-            <div style={{background:'#f8f6f0',border:'1px solid #e0ddd4',borderRadius:10,padding:14,marginBottom:20}}>
-                      <div style={{fontWeight:700,fontSize:14,color:'#1a3c6d',marginBottom:8}}>How It Works</div>
-                      <div style={{fontSize:12,color:'#555',lineHeight:'1.6'}}>
-                                  <div>{'\u2022'} Pick <b>1 golfer from each of 6 tiers</b> (6 picks total)</div>
-                                <div>{'\u2022'} Your <b>best 4 of 6</b> scores count (drop 2 worst)</div>
-                                <div>{'\u2022'} Scoring: cumulative strokes (lowest total wins)</div>
-                                <div>{'\u2022'} Missed cut = 80 strokes for Rounds 3 and 4</div>
-                                <div>{'\u2022'} Entry fee: <b>$20</b></div>
-                      </div>
-            </div>
-    </div>
       {/* Picks View */}
       {view === 'picks' && (
         <div>
