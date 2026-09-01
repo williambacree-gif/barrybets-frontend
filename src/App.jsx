@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
-import MastersPool from './MastersPool';
+import MNFPool from './MNFPool';
 
 // ─── Supabase Client ─────────────────────────────────────────
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -683,122 +683,112 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 
 // ─── Competition Selector (Landing Page) ─────────────────────
-const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMasters}) => {
+const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF}) => {
   const [competitions,setCompetitions] = useState([]);
   const [loading,setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        // Get leagues user has entries in
         const {data:entries} = await supabase.from("entries").select("league_id").eq("user_id", user.id);
         if (!entries || entries.length === 0) { setLoading(false); return; }
         const leagueIds = [...new Set(entries.map(e => e.league_id))];
-        const enrolledLeagueIds = new Set(leagueIds);
-
-        // Get league details
         const {data:leagues} = await supabase.from("leagues").select("*").in("id", leagueIds);
-
-        // Build competition cards from leagues
-        const comps = (leagues||[]).map(l => ({
+        setCompetitions((leagues||[]).map(l => ({
           id: l.id,
-          name: l.name || "Unnamed Competition",
-          league: "Barry\'s Crew",
-          status: enrolledLeagueIds.has(l.id) ? "active" : "active",
-          icon: "🏀",
-          desc: "Pick 1 winner per day. Survive or go home.",
-          date: "Mar 26-27",
-        }));
-
-        setCompetitions(comps);
+          name: l.name || "Sweet 16 Survivor",
+          detail: "Complete · March 2026",
+        })));
       } catch(err) { console.error("Load competitions error:", err); }
       setLoading(false);
     })();
   }, [user]);
 
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  })();
+
+  // One row. A name, a quiet line of detail, and a chevron. Nothing else.
+  const Row = ({name, detail, accent, onClick, last}) => (
+    <button onClick={onClick} style={{
+      width:"100%", display:"flex", alignItems:"center", gap:16, padding:"22px 0",
+      background:"none", border:"none", borderBottom: last ? "none" : `1px solid rgba(26,31,46,0.08)`,
+      cursor:"pointer", textAlign:"left", fontFamily:"'Raleway'",
+    }}>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontFamily:"'Cormorant Garamond', serif", fontSize:24, fontWeight:600,
+          color:C.textDark, lineHeight:1.2, letterSpacing:"-0.01em"}}>{name}</div>
+        <div style={{fontSize:12, color:C.textLight, marginTop:5, letterSpacing:"0.02em"}}>{detail}</div>
+      </div>
+      {accent && <span style={{fontSize:10, fontWeight:600, letterSpacing:"0.14em",
+        color:C.gold, flexShrink:0}}>{accent}</span>}
+      <span style={{fontSize:19, color:"rgba(26,31,46,0.22)", flexShrink:0, lineHeight:1}}>{"›"}</span>
+    </button>
+  );
+
   if (loading) return (
     <div style={{minHeight:"100vh",background:C.pageBg,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{color:C.textMid,fontSize:14,fontFamily:"'Raleway'"}}>Loading competitions...</div>
+      <div style={{color:C.textLight,fontSize:13,fontFamily:"'Raleway'"}}>Loading</div>
     </div>
   );
 
   return (
-    <div style={{minHeight:"100vh",background:C.pageBg,paddingBottom:40}}>
-      <div style={{padding:"52px 24px 12px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{minHeight:"100vh",background:C.pageBg,paddingBottom:56}}>
+
+      <div style={{padding:"64px 28px 0"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
-            <div style={{fontSize:11,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.15em",fontWeight:600,marginBottom:4}}>BARRY BETS</div>
-            <h1 style={{fontSize:30,fontWeight:600,margin:0,color:C.textDark,fontFamily:"'Cormorant Garamond', serif"}}>Welcome, {displayName}</h1>
-            <div style={{color:C.textLight,fontSize:11,marginTop:3,fontFamily:"'Raleway'",letterSpacing:"0.08em"}}>Choose a competition</div>
+            <div style={{fontSize:10,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.22em",fontWeight:600}}>BARRY BETS</div>
+            <h1 style={{fontSize:38,fontWeight:600,margin:"10px 0 0",color:C.textDark,
+              fontFamily:"'Cormorant Garamond', serif",lineHeight:1.05,letterSpacing:"-0.02em"}}>
+              {greeting},<br/>{displayName}
+            </h1>
           </div>
-          <HexLogo size={50}/>
+          <div style={{marginTop:4}}><HexLogo size={44}/></div>
         </div>
       </div>
-      <div style={{padding:"0 24px"}}>
-        <GoldDiv/>
-        <div style={{marginTop:20}}>
-          {competitions.length === 0 && (
-            <div style={{textAlign:"center",padding:"40px 20px"}}>
-              <div style={{fontSize:40,marginBottom:12}}>🏆</div>
-              <div style={{fontSize:16,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif",marginBottom:8}}>No competitions yet</div>
-              <div style={{fontSize:12,color:C.creamSubtle,fontFamily:"'Raleway'"}}>Check back soon or ask Will for an invite code.</div>
-            </div>
-          )}
-          <Label>Active Pools</Label>
-          <button onClick={()=>onMasters&&onMasters()} style={{padding:"20px",borderRadius:C.r,textAlign:"left",cursor:"pointer",background:"linear-gradient(135deg, #0a5c36 0%, #1a3c6d 100%)",border:"1.5px solid #c9b037",transition:"all 0.25s",marginBottom:12,width:"100%"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-                <span style={{fontSize:28}}>\u26f3</span>
-                <div>
-                  <div style={{fontSize:20,fontWeight:600,color:"#fff",fontFamily:"'Cormorant Garamond', serif"}}>Masters 2026 Pool</div>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,0.7)",fontFamily:"'Raleway'",marginTop:4}}>Tiered Pick 6 \u2022 Use Best 4 \u2022 $20 entry</div>
-                </div>
-              </div>
-              <div style={{textAlign:"right"}}><Badge color="#c9b037" bg="rgba(201,176,55,0.2)">OPEN</Badge><div style={{fontSize:10,color:"rgba(255,255,255,0.5)",fontFamily:"'Raleway'",marginTop:4}}>Apr 9-12</div></div>
-            </div>
-          </button>
-          {competitions.length > 0 && <Label>Past Competitions</Label>}
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {competitions.map(c => (
-              <button key={c.id} onClick={()=>c.status==="active"&&onSelect(c.id)} disabled={c.status==="coming_soon"} style={{
-                padding:"20px",borderRadius:C.r,textAlign:"left",cursor:c.status!=="coming_soon"?"pointer":"default",
-                background:c.status==="active"?C.navyLight:"rgba(35,40,56,0.5)",
-                border:c.status!=="coming_soon"?("1.5px solid "+C.borderGold):("1.5px solid "+C.border),
-                opacity:c.status!=="coming_soon"?1:0.5,transition:"all 0.25s",
-              }}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                  <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-                    <span style={{fontSize:28}}>{c.icon}</span>
-                    <div>
-                      <div style={{fontSize:20,fontWeight:600,color:C.cream,fontFamily:"'Cormorant Garamond', serif"}}>{c.name}</div>
 
-                      <div style={{fontSize:13,color:C.creamMuted,fontFamily:"'Raleway'",marginTop:6,lineHeight:1.5}}>{c.desc}</div>
-                    </div>
-                  </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
-                    {c.status==="active" ? (
-                      <Badge color={C.green} bg={C.greenBg}>LIVE</Badge>
-                    ) : c.status==="pending" ? (
-                      <Badge color={C.gold} bg={C.goldMuted}>JOIN</Badge>
-                    ) : (
-                      <Badge color={C.creamSubtle} bg={C.creamFaint}>COMING SOON</Badge>
-                    )}
-                    <div style={{fontSize:10,color:C.creamSubtle,fontFamily:"'Raleway'",marginTop:6}}>{c.date}</div>
-                  </div>
-                </div>
-              </button>
-            ))}
+      <div style={{padding:"44px 28px 0"}}>
+        {competitions.length === 0 && (
+          <div style={{padding:"8px 0 28px"}}>
+            <div style={{fontFamily:"'Cormorant Garamond', serif",fontSize:22,color:C.textDark,marginBottom:6}}>
+              Nothing running yet
+            </div>
+            <div style={{fontSize:13,color:C.textLight,fontFamily:"'Raleway'",lineHeight:1.6}}>
+              Ask Will for an invite code.
+            </div>
           </div>
-        </div>
-        {/* Profile quick actions */}
-        <div style={{marginTop:32,display:"flex",gap:10}}>
-          <button onClick={onLogout} style={{flex:1,padding:"12px",borderRadius:C.rSm,border:"1.5px solid "+C.border,background:"transparent",color:C.creamMuted,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'Raleway'",letterSpacing:"0.05em"}}>SIGN OUT</button>
-        </div>
+        )}
 
-        <div style={{textAlign:"center",marginTop:32}}>
-          <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Cormorant Garamond', serif",fontStyle:"italic",lineHeight:1.8,opacity:0.7}}>Why do we lock our doors?<br/>{"…"}to keep Blair out</p>
-          <div style={{color:C.creamSubtle,fontSize:10,fontFamily:"'Raleway'",letterSpacing:"0.15em",marginTop:12}}>barrysbets.net</div>
-        </div>
+        <Row
+          name="Monday Night Football"
+          detail={"Head to head against the spread"}
+          accent="LIVE"
+          onClick={()=>onMNF&&onMNF()}
+          last={competitions.length === 0}
+        />
+
+        {competitions.map((c,i) => (
+          <Row key={c.id} name={c.name} detail={c.detail}
+            onClick={()=>onSelect(c.id)} last={i === competitions.length-1}/>
+        ))}
+      </div>
+
+      <div style={{padding:"48px 28px 0",textAlign:"center"}}>
+        <button onClick={onLogout} style={{background:"none",border:"none",cursor:"pointer",
+          color:C.textLight,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",letterSpacing:"0.14em"}}>
+          SIGN OUT
+        </button>
+      </div>
+
+      <div style={{textAlign:"center",marginTop:40}}>
+        <p style={{color:"rgba(26,31,46,0.32)",fontSize:12,fontFamily:"'Cormorant Garamond', serif",
+          fontStyle:"italic",lineHeight:1.8,margin:0}}>
+          Why do we lock our doors?<br/>{"…"}to keep Blair out
+        </p>
+        <div style={{color:"rgba(26,31,46,0.22)",fontSize:9,fontFamily:"'Raleway'",
+          letterSpacing:"0.2em",marginTop:14}}>BARRYSBETS.NET</div>
       </div>
     </div>
   );
@@ -864,18 +854,26 @@ export default function BarryBets() {
   if (!user) return <div style={app}><LoginScreen onLogin={handleLogin}/></div>;
   if (!selectedCompetition) return (
     <div style={app}>
-      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMasters={()=>{setSelectedCompetition("masters");}}/>
+      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}}/>
     </div>
   );
 
-  if (selectedCompetition === "masters") return (
+  if (selectedCompetition === "mnf") return (
     <div style={app}>
-      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:C.navyDark,padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:99,borderBottom:"1px solid "+C.border}}>
-        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:C.goldSubtle,border:"1px solid "+C.borderGold,borderRadius:16,padding:"4px 12px",color:C.gold,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",letterSpacing:"0.05em"}}>{"<"} COMPETITIONS</button>
-        <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'",fontWeight:600}}>Masters Pool</span>
+      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,
+        background:"rgba(245,242,237,0.92)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+        padding:"14px 22px",display:"flex",alignItems:"center",zIndex:99,
+        borderBottom:"1px solid rgba(26,31,46,0.07)"}}>
+        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:"none",border:"none",
+          padding:0,color:C.textLight,fontSize:13,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",
+          display:"flex",alignItems:"center",gap:5}}>
+          <span style={{fontSize:17,lineHeight:1}}>{"\u2039"}</span> Barry Bets
+        </button>
+        <span style={{position:"absolute",left:"50%",transform:"translateX(-50%)",fontSize:12.5,
+          color:C.textDark,fontFamily:"'Raleway'",fontWeight:600,whiteSpace:"nowrap"}}>Monday Night</span>
       </div>
-      <div style={{paddingTop:44}}>
-        <MastersPool userId={user?.id} leagueId={LEAGUE_ID} userName={displayName}/>
+      <div style={{paddingTop:49}}>
+        <MNFPool userId={user?.id} userName={displayName}/>
       </div>
     </div>
   );
