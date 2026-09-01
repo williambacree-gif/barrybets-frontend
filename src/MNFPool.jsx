@@ -239,7 +239,20 @@ export default function MNFPool({ userId }) {
             <div style={{fontSize:13, color:C.inkMuted}}>You{"’"}re not scheduled this week.</div>
           ) : (
             <>
-              <Eyebrow>{iPick ? "Your pick" : `${mine.picker?.display_name} picks`}</Eyebrow>
+              <Eyebrow>Your matchup</Eyebrow>
+              <div style={{fontFamily:SERIF, fontSize:24, fontWeight:600, marginTop:10,
+                letterSpacing:"-0.01em"}}>
+                {iPick ? `You vs ${mine.opponent?.display_name}` : `${mine.picker?.display_name} vs you`}
+              </div>
+
+              {/* waiting on the other guy */}
+              {!iPick && !mine.picked_side && (
+                <div style={{fontSize:13.5, color:C.inkMuted, marginTop:12, lineHeight:1.65}}>
+                  {hasLine
+                    ? `${mine.picker?.display_name} is on the clock. You get whichever side he doesn${"’"}t take.`
+                    : `${mine.picker?.display_name} picks once the spread freezes Wednesday. You get the other side.`}
+                </div>
+              )}
 
               {/* choosing */}
               {iPick && !mine.picked_side && hasLine && !locked && (
