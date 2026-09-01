@@ -224,9 +224,11 @@ export default function CFBPool({ userId }) {
               {!alive
                 ? `Knocked out in week ${me?.eliminated_week}. ${meta?.can_buy_back ? `Buy back in for $${season.buyback_fee}.` : "Buy-backs are closed."}`
                 : locked
-                  ? "Board locked."
+                  ? myPick?.auto_assigned
+                    ? "No pick came in, so you were handed the lowest ranked team you hadn’t used."
+                    : "Board locked."
                   : countdown
-                    ? `Everything locks in ${countdown}, at the first ranked kickoff.`
+                    ? `Everything locks in ${countdown}, at the first ranked kickoff. Miss it and you get the lowest ranked team left.`
                     : "Locks at the first ranked kickoff."}
             </div>
 
@@ -330,6 +332,8 @@ export default function CFBPool({ userId }) {
 
           <div style={{fontSize:11.5, color:C.inkFaint, marginTop:26, lineHeight:1.7}}>
             Teams are one and done. Buying back in doesn{"’"}t return the ones you already burned.
+            Forget to pick and you{"’"}re handed the lowest ranked Top 25 team playing that week
+            {" "}that you haven{"’"}t used yet.
           </div>
         </div>
       )}
