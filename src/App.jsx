@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import MNFPool from './MNFPool';
+import CFBPool from './CFBPool';
 
 // ─── Supabase Client ─────────────────────────────────────────
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -683,7 +684,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 
 // ─── Competition Selector (Landing Page) ─────────────────────
-const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF}) => {
+const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB}) => {
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -749,6 +750,12 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF}) => {
           detail="Head to head against the spread"
           accent="LIVE"
           onClick={()=>onMNF&&onMNF()}
+        />
+        <Row
+          name="College Football Survivor"
+          detail="Top 25 games · one team, once"
+          accent="LIVE"
+          onClick={()=>onCFB&&onCFB()}
           last={true}
         />
       </div>
@@ -831,7 +838,27 @@ export default function BarryBets() {
   if (!user) return <div style={app}><LoginScreen onLogin={handleLogin}/></div>;
   if (!selectedCompetition) return (
     <div style={app}>
-      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}}/>
+      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}} onCFB={()=>{setSelectedCompetition("cfb");}}/>
+    </div>
+  );
+
+  if (selectedCompetition === "cfb") return (
+    <div style={app}>
+      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,
+        background:"rgba(242,238,230,0.92)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+        padding:"14px 22px",display:"flex",alignItems:"center",zIndex:99,
+        borderBottom:"1px solid rgba(23,32,58,0.07)"}}>
+        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:"none",border:"none",
+          padding:0,color:C.textLight,fontSize:13,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",
+          display:"flex",alignItems:"center",gap:5}}>
+          <span style={{fontSize:17,lineHeight:1}}>{"\u2039"}</span> Barry Bets
+        </button>
+        <span style={{position:"absolute",left:"50%",transform:"translateX(-50%)",fontSize:12.5,
+          color:C.textDark,fontFamily:"'Raleway'",fontWeight:600,whiteSpace:"nowrap"}}>Survivor</span>
+      </div>
+      <div style={{paddingTop:49}}>
+        <CFBPool userId={user?.id} userName={displayName}/>
+      </div>
     </div>
   );
 
