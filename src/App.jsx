@@ -684,111 +684,88 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 // ─── Competition Selector (Landing Page) ─────────────────────
 const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF}) => {
-  const [competitions,setCompetitions] = useState([]);
-  const [loading,setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const {data:entries} = await supabase.from("entries").select("league_id").eq("user_id", user.id);
-        if (!entries || entries.length === 0) { setLoading(false); return; }
-        const leagueIds = [...new Set(entries.map(e => e.league_id))];
-        const {data:leagues} = await supabase.from("leagues").select("*").in("id", leagueIds);
-        setCompetitions((leagues||[]).map(l => ({
-          id: l.id,
-          name: l.name || "Sweet 16 Survivor",
-          detail: "Complete · March 2026",
-        })));
-      } catch(err) { console.error("Load competitions error:", err); }
-      setLoading(false);
-    })();
-  }, [user]);
-
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   })();
 
-  // One row. A name, a quiet line of detail, and a chevron. Nothing else.
-  const Row = ({name, detail, accent, onClick, last}) => (
-    <button onClick={onClick} style={{
-      width:"100%", display:"flex", alignItems:"center", gap:16, padding:"22px 0",
-      background:"none", border:"none", borderBottom: last ? "none" : `1px solid rgba(26,31,46,0.08)`,
-      cursor:"pointer", textAlign:"left", fontFamily:"'Raleway'",
-    }}>
-      <div style={{flex:1, minWidth:0}}>
-        <div style={{fontFamily:"'Cormorant Garamond', serif", fontSize:24, fontWeight:600,
-          color:C.textDark, lineHeight:1.2, letterSpacing:"-0.01em"}}>{name}</div>
-        <div style={{fontSize:12, color:C.textLight, marginTop:5, letterSpacing:"0.02em"}}>{detail}</div>
-      </div>
-      {accent && <span style={{fontSize:10, fontWeight:600, letterSpacing:"0.14em",
-        color:C.gold, flexShrink:0}}>{accent}</span>}
-      <span style={{fontSize:19, color:"rgba(26,31,46,0.22)", flexShrink:0, lineHeight:1}}>{"›"}</span>
-    </button>
-  );
+  const P = { parchment:"#F2EEE6", navy:"#17203A", navyDeep:"#101830",
+              cream:"#EFE7DA", brass:"#B08D3F", brassLight:"#C9A961" };
 
-  if (loading) return (
-    <div style={{minHeight:"100vh",background:C.pageBg,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{color:C.textLight,fontSize:13,fontFamily:"'Raleway'"}}>Loading</div>
+  // Brass rule with a centre diamond — the one piece of ornament the app keeps.
+  const Rule = () => (
+    <div style={{display:"flex",alignItems:"center",gap:14}}>
+      <div style={{flex:1,height:1,background:`linear-gradient(90deg,transparent,${P.brass}55,${P.brass}88)`}}/>
+      <div style={{width:5,height:5,transform:"rotate(45deg)",background:P.brass,opacity:0.75}}/>
+      <div style={{flex:1,height:1,background:`linear-gradient(90deg,${P.brass}88,${P.brass}55,transparent)`}}/>
     </div>
   );
 
-  return (
-    <div style={{minHeight:"100vh",background:C.pageBg,paddingBottom:56}}>
+  const Row = ({name, detail, accent, onClick, last}) => (
+    <button onClick={onClick} style={{
+      width:"100%", display:"flex", alignItems:"center", gap:16, padding:"26px 0",
+      background:"none", border:"none",
+      borderBottom: last ? "none" : "1px solid rgba(23,32,58,0.10)",
+      cursor:"pointer", textAlign:"left", fontFamily:"'Raleway'",
+    }}>
+      <div style={{flex:1, minWidth:0}}>
+        <div style={{fontFamily:"'Cormorant Garamond', serif", fontSize:27, fontWeight:600,
+          color:P.navy, lineHeight:1.15, letterSpacing:"-0.01em"}}>{name}</div>
+        <div style={{fontSize:12, color:"rgba(23,32,58,0.52)", marginTop:6,
+          letterSpacing:"0.02em"}}>{detail}</div>
+      </div>
+      {accent && <span style={{fontSize:9, fontWeight:700, letterSpacing:"0.18em",
+        color:P.brass, flexShrink:0}}>{accent}</span>}
+      <span style={{fontSize:20, color:"rgba(23,32,58,0.24)", flexShrink:0, lineHeight:1}}>{"›"}</span>
+    </button>
+  );
 
-      <div style={{padding:"64px 28px 0"}}>
+  return (
+    <div style={{minHeight:"100vh",background:P.parchment,paddingBottom:56}}>
+
+      {/* navy crest header */}
+      <div style={{background:`linear-gradient(175deg, ${P.navy} 0%, ${P.navyDeep} 100%)`,
+        padding:"56px 28px 34px", position:"relative"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
-            <div style={{fontSize:10,color:C.gold,fontFamily:"'Raleway'",letterSpacing:"0.22em",fontWeight:600}}>BARRY BETS</div>
-            <h1 style={{fontSize:38,fontWeight:600,margin:"10px 0 0",color:C.textDark,
-              fontFamily:"'Cormorant Garamond', serif",lineHeight:1.05,letterSpacing:"-0.02em"}}>
+            <div style={{fontSize:9,color:P.brassLight,fontFamily:"'Raleway'",
+              letterSpacing:"0.32em",fontWeight:600}}>BARRY BETS</div>
+            <h1 style={{fontSize:40,fontWeight:500,margin:"14px 0 0",color:P.cream,
+              fontFamily:"'Cormorant Garamond', serif",lineHeight:1.02,letterSpacing:"-0.015em"}}>
               {greeting},<br/>{displayName}
             </h1>
           </div>
-          <div style={{marginTop:4}}><HexLogo size={44}/></div>
+          <div style={{marginTop:2,opacity:0.95}}><HexLogo size={50} dark={true}/></div>
         </div>
+        <div style={{marginTop:30}}><Rule/></div>
+        <div style={{fontSize:9,color:"rgba(239,231,218,0.42)",fontFamily:"'Raleway'",
+          letterSpacing:"0.24em",textAlign:"center",marginTop:14}}>EST. 2026</div>
       </div>
 
-      <div style={{padding:"44px 28px 0"}}>
-        {competitions.length === 0 && (
-          <div style={{padding:"8px 0 28px"}}>
-            <div style={{fontFamily:"'Cormorant Garamond', serif",fontSize:22,color:C.textDark,marginBottom:6}}>
-              Nothing running yet
-            </div>
-            <div style={{fontSize:13,color:C.textLight,fontFamily:"'Raleway'",lineHeight:1.6}}>
-              Ask Will for an invite code.
-            </div>
-          </div>
-        )}
-
+      {/* competitions */}
+      <div style={{padding:"14px 28px 0"}}>
         <Row
           name="Monday Night Football"
-          detail={"Head to head against the spread"}
+          detail="Head to head against the spread"
           accent="LIVE"
           onClick={()=>onMNF&&onMNF()}
-          last={competitions.length === 0}
+          last={true}
         />
-
-        {competitions.map((c,i) => (
-          <Row key={c.id} name={c.name} detail={c.detail}
-            onClick={()=>onSelect(c.id)} last={i === competitions.length-1}/>
-        ))}
       </div>
 
-      <div style={{padding:"48px 28px 0",textAlign:"center"}}>
+      <div style={{padding:"44px 28px 0",textAlign:"center"}}>
         <button onClick={onLogout} style={{background:"none",border:"none",cursor:"pointer",
-          color:C.textLight,fontSize:11,fontWeight:600,fontFamily:"'Raleway'",letterSpacing:"0.14em"}}>
-          SIGN OUT
-        </button>
+          color:"rgba(23,32,58,0.42)",fontSize:10,fontWeight:700,fontFamily:"'Raleway'",
+          letterSpacing:"0.2em"}}>SIGN OUT</button>
       </div>
 
-      <div style={{textAlign:"center",marginTop:40}}>
-        <p style={{color:"rgba(26,31,46,0.32)",fontSize:12,fontFamily:"'Cormorant Garamond', serif",
-          fontStyle:"italic",lineHeight:1.8,margin:0}}>
+      <div style={{textAlign:"center",marginTop:44}}>
+        <p style={{color:"rgba(23,32,58,0.3)",fontSize:13,fontFamily:"'Cormorant Garamond', serif",
+          fontStyle:"italic",lineHeight:1.85,margin:0}}>
           Why do we lock our doors?<br/>{"…"}to keep Blair out
         </p>
-        <div style={{color:"rgba(26,31,46,0.22)",fontSize:9,fontFamily:"'Raleway'",
-          letterSpacing:"0.2em",marginTop:14}}>BARRYSBETS.NET</div>
+        <div style={{color:"rgba(23,32,58,0.2)",fontSize:9,fontFamily:"'Raleway'",
+          letterSpacing:"0.22em",marginTop:16}}>BARRYSBETS.NET</div>
       </div>
     </div>
   );
