@@ -219,7 +219,11 @@ export default function MNFPool({ userId }) {
       {err && <div style={{...pad, fontSize:12.5, color:C.red, marginTop:20, lineHeight:1.6}}>{err}</div>}
 
       {/* ══ WEEK ══ */}
-      {view === "week" && (!game ? (
+      {view === "week" && (!data ? (
+        // Week data is still in flight. Without this the screen briefly claims
+        // there is no game, which reads as a broken app rather than a slow one.
+        <div style={{...pad, marginTop:30, fontSize:13, color:C.inkFaint}}>Loading</div>
+      ) : !game ? (
         <div style={{...pad, marginTop:30, fontSize:13, color:C.inkMuted}}>
           No game scheduled for week {week} yet.
         </div>
