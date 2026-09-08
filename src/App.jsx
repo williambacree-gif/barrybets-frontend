@@ -7,6 +7,7 @@ import CFBPool from './CFBPool';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+const API = import.meta.env.VITE_API_URL;
 
 // ─── Constants ───────────────────────────────────────────────
 const TID = "00000000-0000-0000-0000-000000002026";
@@ -108,11 +109,21 @@ const LoginScreen = ({onLogin}) => {
     setLoading(false);
   };
 
+  // Supabase's built-in mailer only delivers to the project owner, so
+  // this goes through our own server, which mints the link and sends it
+  // with Resend. The server answers the same way whether or not the
+  // address has an account, so a failure here really is a failure.
   const handleReset = async () => {
+    setResetMsg("Sending…");
     try {
-      await supabase.auth.resetPasswordForEmail(resetEmail, {redirectTo: window.location.origin});
+      const res = await fetch(API + "/api/auth/request-reset", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email: resetEmail.trim()}),
+      });
+      if (!res.ok) throw new Error("Couldn't reach the server. Try again in a minute.");
       setResetMsg("Check your email for a reset link.");
-    } catch(err) { setResetMsg(err.message); }
+    } catch(err) { setResetMsg(err.message || "Something went wrong. Try again."); }
   };
 
   if (showReset) return (
@@ -779,6 +790,63 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB}) =
 };
 
 // ═══════════════════════════════════════════════════════════════
+// SET A NEW PASSWORD
+// Shown when someone arrives on a recovery link. Without this the link
+// just silently signs you in and leaves you to find the settings page.
+// ═══════════════════════════════════════════════════════════════
+const SetPasswordScreen = ({onDone}) => {
+  const [pw,setPw]=useState("");
+  const [pw2,setPw2]=useState("");
+  const [msg,setMsg]=useState("");
+  const [saving,setSaving]=useState(false);
+
+  const save = async () => {
+    if (pw.length < 6) { setMsg("Password must be at least 6 characters"); return; }
+    if (pw !== pw2) { setMsg("Passwords don't match"); return; }
+    setSaving(true); setMsg("");
+    try {
+      const {error} = await supabase.auth.updateUser({password: pw});
+      if (error) throw error;
+      onDone();
+    } catch(err) { setMsg(err.message || "Couldn't set the password"); }
+    setSaving(false);
+  };
+
+  const field = {width:"100%",padding:"16px",borderRadius:C.rSm,border:`1px solid ${C.border}`,
+    background:"#3D4238",color:C.cream,fontSize:15,fontFamily:"'Raleway'",marginBottom:12,
+    outline:"none",boxSizing:"border-box"};
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",
+      justifyContent:"center",padding:"40px 32px",
+      background:`radial-gradient(ellipse at 50% 30%,#232838 0%,${C.navy} 60%,${C.navyDark} 100%)`}}>
+      <HexLogo size={80} dark={true}/>
+      <h2 style={{fontSize:22,color:C.cream,fontFamily:"'Cormorant Garamond', serif",margin:"20px 0 8px"}}>
+        Set a New Password
+      </h2>
+      <p style={{color:C.creamSubtle,fontSize:12,fontFamily:"'Raleway'",marginBottom:20,textAlign:"center"}}>
+        Pick something you{"'"}ll remember. You{"'"}re already signed in.
+      </p>
+      <div style={{width:"100%",maxWidth:360}}>
+        <input value={pw} onChange={e=>setPw(e.target.value)} type="password"
+          placeholder="New password" style={field}/>
+        <input value={pw2} onChange={e=>setPw2(e.target.value)} type="password"
+          placeholder="Confirm new password" style={field}
+          onKeyDown={e=>e.key==="Enter"&&save()}/>
+        {msg && <div style={{color:C.red,fontSize:12,fontFamily:"'Raleway'",marginBottom:12,
+          textAlign:"center"}}>{msg}</div>}
+        <button onClick={save} disabled={saving} style={{width:"100%",padding:"17px",
+          borderRadius:C.rSm,border:"none",background:C.gold,color:C.navyDark,fontSize:13,
+          fontWeight:700,letterSpacing:"0.18em",cursor:"pointer",fontFamily:"'Raleway'",
+          opacity:saving?0.6:1}}>
+          {saving?"SAVING...":"SAVE PASSWORD"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 export default function BarryBets() {
@@ -788,6 +856,11 @@ export default function BarryBets() {
   const [entry,setEntry]=useState(null);
   const [displayName,setDisplayName]=useState("");
   const [selectedCompetition,setSelectedCompetition]=useState(null);
+  // Arriving on a recovery link. Read the hash before supabase-js consumes
+  // it, and also listen for the event, because whichever lands first wins.
+  const [recovery,setRecovery]=useState(
+    typeof window !== "undefined" && window.location.hash.indexOf("type=recovery") > -1
+  );
 
   // Auth check
   useEffect(()=>{
@@ -797,6 +870,7 @@ export default function BarryBets() {
       setLoading(false);
     })();
     const {data:{subscription}} = supabase.auth.onAuthStateChange((ev,session)=>{
+      if (ev === "PASSWORD_RECOVERY") setRecovery(true);
       setUser(session?.user||null);
     });
     return ()=>subscription?.unsubscribe();
@@ -836,6 +910,10 @@ export default function BarryBets() {
 
   if (loading) return <div style={app}><div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",color:C.textMid}}>Loading...</div></div>;
   if (!user) return <div style={app}><LoginScreen onLogin={handleLogin}/></div>;
+  if (recovery) return <div style={app}><SetPasswordScreen onDone={()=>{
+    setRecovery(false);
+    window.history.replaceState(null, "", window.location.pathname);
+  }}/></div>;
   if (!selectedCompetition) return (
     <div style={app}>
       <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}} onCFB={()=>{setSelectedCompetition("cfb");}}/>
