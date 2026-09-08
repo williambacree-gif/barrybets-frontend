@@ -27,6 +27,13 @@ const timeLabel = iso => et(iso, { hour:"numeric", minute:"2-digit" });
 // "Tigers" — so show the full school name ESPN gives us.
 const teamName = s => String(s || "");
 
+// Prefilled Venmo link. Fixed note shape so payments arrive labelled and
+// are easy to match against the ledger.
+const venmoLink = (handle, amount, note) =>
+  `https://venmo.com/${handle}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`;
+const chargeNote = c =>
+  c.kind === "entry" ? "Barry Bets CFB entry" : `Barry Bets CFB buyback wk${c.pool_week ?? ""}`;
+
 const Eyebrow = ({ children, tone = C.inkFaint, style }) => (
   <div style={{ fontFamily:SANS, fontSize:9, fontWeight:700, letterSpacing:"0.22em",
     color:tone, textTransform:"uppercase", ...style }}>{children}</div>
@@ -54,6 +61,7 @@ export default function CFBPool({ userId }) {
   const [err, setErr]       = useState("");
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState("");
+  const [ledger, setLedger] = useState(null);
 
   const call = useCallback(async (path, opts = {}) => {
     const res = await fetch(API + "/api/cfb" + path, {
@@ -189,8 +197,11 @@ export default function CFBPool({ userId }) {
 
       <div style={{...pad, paddingTop:22}}>
         <div style={{display:"flex", gap:2, padding:3, background:"rgba(23,32,58,0.06)", borderRadius:10}}>
-          {[["board","This week"],["leaderboard","Leaderboard"]].map(([id,label]) => (
-            <button key={id} onClick={()=>setView(id)} style={{
+          {(meta?.is_admin
+            ? [["board","This week"],["leaderboard","Leaderboard"],["money","Money"]]
+            : [["board","This week"],["leaderboard","Leaderboard"]]
+          ).map(([id,label]) => (
+            <button key={id} onClick={()=>{ setView(id); if (id==="money" && !ledger) call("/ledger").then(setLedger).catch(e=>setErr(e.message)); }} style={{
               flex:1, padding:"9px 0", borderRadius:8, border:"none", cursor:"pointer",
               fontFamily:SANS, fontSize:12, fontWeight:600,
               background: view===id ? C.card : "transparent",
@@ -202,6 +213,32 @@ export default function CFBPool({ userId }) {
       </div>
 
       {err && <div style={{...pad, fontSize:12.5, color:C.red, marginTop:18, lineHeight:1.6}}>{err}</div>}
+
+      {/* What you still owe, shown to you so most of it settles itself. */}
+      {meta?.my_balance > 0 && (
+        <div style={{...pad, marginTop:18}}>
+          <div style={{background:C.card, border:"1px solid rgba(23,32,58,0.12)", borderRadius:10, padding:"16px 18px"}}>
+            <div style={{display:"flex", alignItems:"baseline", gap:9, flexWrap:"wrap"}}>
+              <span style={{fontFamily:SANS, fontSize:10.5, letterSpacing:1.6, textTransform:"uppercase", color:C.inkMuted}}>You owe</span>
+              <span style={{fontSize:22, fontWeight:700, color:C.ink}}>${meta.my_balance.toLocaleString()}</span>
+            </div>
+            <div style={{marginTop:10, display:"flex", flexDirection:"column", gap:8}}>
+              {(meta.my_charges || []).filter(c => !c.paid).map(c => (
+                <div key={c.id} style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
+                  <span style={{flex:1, minWidth:130, fontSize:13, color:C.inkMuted}}>
+                    {c.kind === "entry" ? "Entry" : `Buy-back, week ${c.pool_week}`} {MINUS} ${c.amount}
+                  </span>
+                  <a href={venmoLink(meta.venmo, c.amount, chargeNote(c))} target="_blank" rel="noopener noreferrer"
+                    style={{fontFamily:SANS, fontSize:10.5, letterSpacing:1.4, textTransform:"uppercase",
+                      padding:"8px 14px", borderRadius:8, background:C.ink, color:C.card, textDecoration:"none"}}>
+                    Pay ${c.amount} on Venmo
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ BOARD ══ */}
       {view === "board" && (
@@ -337,6 +374,72 @@ export default function CFBPool({ userId }) {
             Forget to pick and you{"’"}re handed the lowest ranked Top 25 team playing that week
             {" "}that you haven{"’"}t used yet.
           </div>
+        </div>
+      )}
+
+      {/* ══ MONEY (admin) ══ */}
+      {view === "money" && (
+        <div style={{...pad, paddingTop:30}}>
+          <Eyebrow>The books</Eyebrow>
+          {!ledger ? (
+            <div style={{marginTop:18, fontSize:13.5, color:C.inkMuted}}>Loading{"…"}</div>
+          ) : (
+            <>
+              <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:18, marginBottom:22}}>
+                {[["Collected", ledger.collected, C.green || C.ink],
+                  ["Outstanding", ledger.outstanding, ledger.outstanding > 0 ? C.red : C.inkMuted],
+                  ["Pot", ledger.pot, C.ink]].map(([label, value, tone]) => (
+                  <div key={label} style={{flex:"1 1 120px", background:C.card,
+                    border:"1px solid rgba(23,32,58,0.10)", borderRadius:10, padding:"14px 16px"}}>
+                    <div style={{fontFamily:SANS, fontSize:10, letterSpacing:1.5,
+                      textTransform:"uppercase", color:C.inkMuted}}>{label}</div>
+                    <div style={{fontSize:22, fontWeight:700, color:tone, marginTop:3}}>
+                      ${Number(value).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {ledger.items.length === 0 ? (
+                <div style={{fontSize:13.5, color:C.inkMuted, lineHeight:1.7}}>
+                  Nothing owed yet.
+                </div>
+              ) : ledger.items.map((row, i) => (
+                <div key={row.id} style={{display:"flex", alignItems:"center", gap:10, padding:"13px 0",
+                  borderBottom: i === ledger.items.length - 1 ? "none" : "1px solid rgba(23,32,58,0.08)"}}>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{fontSize:15, fontWeight:600, color: row.paid ? C.inkFaint : C.ink}}>
+                      {row.display_name}
+                    </div>
+                    <div style={{fontSize:11.5, color:C.inkMuted, marginTop:2}}>
+                      {row.kind === "entry" ? "Entry" : `Buy-back, week ${row.pool_week}`}
+                    </div>
+                  </div>
+                  <span style={{fontSize:15, fontWeight:600, color: row.paid ? C.inkFaint : C.ink}}>
+                    ${row.amount}
+                  </span>
+                  <button onClick={async () => {
+                    setLedger(l => ({...l, items: l.items.map(x => x.id === row.id ? {...x, paid: !x.paid} : x)}));
+                    try {
+                      await call("/mark-paid", { method:"POST", body: JSON.stringify({ payment_id: row.id, paid: !row.paid }) });
+                      call("/ledger").then(setLedger).catch(()=>{});
+                    } catch (e) { setErr(e.message); call("/ledger").then(setLedger).catch(()=>{}); }
+                  }} style={{
+                    fontFamily:SANS, fontSize:10, letterSpacing:1.4, textTransform:"uppercase",
+                    padding:"7px 12px", borderRadius:8, cursor:"pointer", minWidth:78,
+                    background: row.paid ? C.ink : "transparent",
+                    color: row.paid ? C.card : C.red,
+                    border: row.paid ? "none" : `1px solid ${C.red}`,
+                  }}>{row.paid ? "Paid" : "Unpaid"}</button>
+                </div>
+              ))}
+
+              <div style={{fontSize:11.5, color:C.inkFaint, marginTop:24, lineHeight:1.7}}>
+                Tap a row to flip it. Everyone sees their own balance with a Venmo button,
+                so this should mostly clear itself.
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
