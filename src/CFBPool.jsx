@@ -23,7 +23,9 @@ const MINUS = "−";
 const et = (iso, o) => new Date(iso).toLocaleString("en-US", { timeZone:"America/New_York", ...o });
 const dayLabel  = iso => et(iso, { weekday:"long", month:"long", day:"numeric" });
 const timeLabel = iso => et(iso, { hour:"numeric", minute:"2-digit" });
-const lastWord  = s => String(s || "").split(" ").slice(-1)[0];
+// Mascots alone are ambiguous — Missouri, Auburn, LSU and Clemson are all
+// "Tigers" — so show the full school name ESPN gives us.
+const teamName = s => String(s || "");
 
 const Eyebrow = ({ children, tone = C.inkFaint, style }) => (
   <div style={{ fontFamily:SANS, fontSize:9, fontWeight:700, letterSpacing:"0.22em",
@@ -323,7 +325,7 @@ export default function CFBPool({ userId }) {
                   {(p.teams_used || []).map((t, k) => (
                     <span key={k} style={{fontSize:11, padding:"4px 10px", borderRadius:20,
                       background:"rgba(23,32,58,0.05)", border:`1px solid ${C.hair}`,
-                      color:C.inkMuted}}>{lastWord(t)}</span>
+                      color:C.inkMuted}}>{teamName(t)}</span>
                   ))}
                 </div>
               </div>
