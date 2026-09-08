@@ -19,6 +19,7 @@ const C = {
 const SERIF = "'Cormorant Garamond', Georgia, serif";
 const SANS  = "'Raleway', -apple-system, BlinkMacSystemFont, sans-serif";
 const MINUS = "−";
+const MULT  = "×";
 
 const et = (iso, o) => new Date(iso).toLocaleString("en-US", { timeZone:"America/New_York", ...o });
 const dayLabel  = iso => et(iso, { weekday:"long", month:"long", day:"numeric" });
@@ -198,8 +199,8 @@ export default function CFBPool({ userId }) {
       <div style={{...pad, paddingTop:22}}>
         <div style={{display:"flex", gap:2, padding:3, background:"rgba(23,32,58,0.06)", borderRadius:10}}>
           {(meta?.is_admin
-            ? [["board","This week"],["leaderboard","Leaderboard"],["money","Money"]]
-            : [["board","This week"],["leaderboard","Leaderboard"]]
+            ? [["board","This week"],["leaderboard","Leaderboard"],["rules","Rules"],["money","Money"]]
+            : [["board","This week"],["leaderboard","Leaderboard"],["rules","Rules"]]
           ).map(([id,label]) => (
             <button key={id} onClick={()=>{ setView(id); if (id==="money" && !ledger) call("/ledger").then(setLedger).catch(e=>setErr(e.message)); }} style={{
               flex:1, padding:"9px 0", borderRadius:8, border:"none", cursor:"pointer",
@@ -266,9 +267,7 @@ export default function CFBPool({ userId }) {
                   ? myPick?.auto_assigned
                     ? "No pick came in, so you were handed the lowest ranked team you hadn’t used."
                     : "Board locked."
-                  : countdown
-                    ? `Everything locks in ${countdown}, at the first ranked kickoff. Miss it and you get the lowest ranked team left.`
-                    : "Locks at the first ranked kickoff."}
+                  : "Picks lock at the first ranked kickoff of the week (this could be a Thursday)."}
             </div>
 
             {!alive && meta?.can_buy_back && (
@@ -342,11 +341,18 @@ export default function CFBPool({ userId }) {
                       color: p.status === "alive" ? C.ink : C.inkFaint}}>
                       {p.user_id === userId ? "You" : p.display_name}
                     </div>
-                    <div style={{fontSize:11.5, color:C.inkMuted, marginTop:4}}>
-                      {p.status === "alive"
+                    <div style={{fontSize:11.5, color:C.inkMuted, marginTop:4,
+                      display:"flex", alignItems:"center", gap:7, flexWrap:"wrap"}}>
+                      <span>{p.status === "alive"
                         ? `Alive · ${p.wins} correct`
-                        : `Out in week ${p.eliminated_week}`}
-                      {p.buybacks > 0 && ` · ${p.buybacks} buy-back${p.buybacks>1?"s":""}`}
+                        : `Out in week ${p.eliminated_week}`}</span>
+                      {p.buybacks > 0 && (
+                        <span style={{fontFamily:SANS, fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+                          textTransform:"uppercase", color:C.brass, border:`1px solid ${C.brass}`,
+                          borderRadius:5, padding:"2px 6px"}}>
+                          Bought back{p.buybacks > 1 ? ` ${MULT}${p.buybacks}` : ""}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span style={{fontSize:9.5, fontWeight:700, letterSpacing:"0.14em",
@@ -373,6 +379,30 @@ export default function CFBPool({ userId }) {
             Teams are one and done. Buying back in doesn{"’"}t return the ones you already burned.
             Forget to pick and you{"’"}re handed the lowest ranked Top 25 team playing that week
             {" "}that you haven{"’"}t used yet.
+          </div>
+        </div>
+      )}
+
+      {/* ══ RULES ══ */}
+      {view === "rules" && (
+        <div style={{...pad, paddingTop:30}}>
+          <Eyebrow>House rules</Eyebrow>
+          <ul style={{margin:"18px 0 0", padding:0, listStyle:"none",
+            fontFamily:SERIF, fontSize:16, color:C.ink, lineHeight:2}}>
+            <li>{"·"} ${season.entry_fee} to enter</li>
+            <li>{"·"} Pick a winner each week, straight up, no spread.</li>
+            <li>{"·"} Can only pick a team once per season.</li>
+            <li>{"·"} Picks lock at the first ranked kickoff of the week (this could be a Thursday).</li>
+            <li>{"·"} Miss the deadline and you{"’"}re handed the lowest ranked Top 25 team playing
+              that week that you haven{"’"}t already used.</li>
+            <li>{"·"} Pick wrong and you{"’"}re out. Buy back in for ${season.buyback_fee} through
+              week {season.buyback_through_week} {MINUS} as many times as you like {MINUS} but the
+              teams you already used stay used.</li>
+            <li>{"·"} Every game with an AP Top 25 team in it is on the board, mismatches included.
+              The spread is shown for information only and is never scored.</li>
+          </ul>
+          <div style={{fontSize:11.5, color:C.inkFaint, marginTop:24, lineHeight:1.7}}>
+            {(meta?.players || []).length} in {MINUS} ${Number(meta?.pot || 0).toLocaleString()} in the pot
           </div>
         </div>
       )}
