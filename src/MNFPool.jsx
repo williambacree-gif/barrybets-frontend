@@ -50,6 +50,12 @@ function lineFor(game, side) {
   return (game.favorite === side ? MINUS : "+") + game.spread_value;
 }
 
+// Prefilled Venmo link. Fixed note shape so payments arrive labelled and
+// are easy to match against the ledger.
+const venmoLink = (handle, amount, note) =>
+  `https://venmo.com/${handle}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`;
+const chargeNote = () => "Barry Bets MNF entry";
+
 // ─── primitives ───────────────────────────────────────────────
 const Eyebrow = ({ children, tone = C.inkFaint, style }) => (
   <div style={{ fontFamily:SANS, fontSize:9, fontWeight:700, letterSpacing:"0.22em",
@@ -84,6 +90,8 @@ export default function MNFPool({ userId }) {
   const [confirm, setConfirm]     = useState(null);
   const [err, setErr]             = useState("");
   const [loading, setLoading]     = useState(true);
+  const [meta, setMeta]           = useState(null);
+  const [ledger, setLedger]       = useState(null);
 
   const call = useCallback(async (path, opts = {}) => {
     const res = await fetch(API + "/api/mnf" + path, {
@@ -102,7 +110,7 @@ export default function MNFPool({ userId }) {
   useEffect(() => {
     if (!token) return;
     call("/season")
-      .then(d => { setSeason(d.season); setWeek(d.current_week || 1); })
+      .then(d => { setSeason(d.season); setMeta(d); setWeek(d.current_week || 1); })
       .catch(e => setErr(e.message))
       .finally(() => setLoading(false));
   }, [token, call]);
@@ -174,6 +182,12 @@ export default function MNFPool({ userId }) {
   const hasLine  = !!game?.spread_frozen_at;
   const final    = game?.status === "final";
 
+  // A line still unfrozen inside 48 hours of kickoff is a fault, not a
+  // schedule. Nobody can pick without one and the week cannot be graded,
+  // so this stops reading as "not yet" and starts reading as "fix me".
+  const lineOverdue = !!game && !hasLine && !final &&
+    new Date(game.kickoff_at) - Date.now() < 48 * 3600 * 1000;
+
   // One row per side. Used live for picking and greyed as a preview beforehand.
   const SideRow = ({ side, disabled, armed, onClick }) => (
     <button disabled={disabled || saving} onClick={onClick} style={{
@@ -203,10 +217,16 @@ export default function MNFPool({ userId }) {
       <div style={{...pad, paddingTop:22}}>
         <div style={{display:"flex", gap:2, padding:3,
           background:"rgba(23,32,58,0.06)", borderRadius:10}}>
-          {[["week","Week"],["standings","Standings"],["schedule","Schedule"]].map(([id,label]) => (
-            <button key={id} onClick={()=>setView(id)} style={{
-              flex:1, padding:"9px 0", borderRadius:8, border:"none", cursor:"pointer",
-              fontFamily:SANS, fontSize:12, fontWeight:600,
+          {(meta?.is_admin
+            ? [["week","Week"],["standings","Standings"],["schedule","Schedule"],["rules","Rules"],["money","Money"]]
+            : [["week","Week"],["standings","Standings"],["schedule","Schedule"],["rules","Rules"]]
+          ).map(([id,label]) => (
+            <button key={id} onClick={()=>{
+              setView(id);
+              if (id === "money" && !ledger) call("/ledger").then(setLedger).catch(e=>setErr(e.message));
+            }} style={{
+              flex:1, padding:"9px 2px", borderRadius:8, border:"none", cursor:"pointer",
+              fontFamily:SANS, fontSize:11, fontWeight:600,
               background: view===id ? C.card : "transparent",
               color: view===id ? C.ink : C.inkMuted,
               boxShadow: view===id ? "0 1px 3px rgba(23,32,58,0.12)" : "none",
@@ -217,6 +237,36 @@ export default function MNFPool({ userId }) {
       </div>
 
       {err && <div style={{...pad, fontSize:12.5, color:C.red, marginTop:20, lineHeight:1.6}}>{err}</div>}
+
+      {/* What you still owe, shown to you so most of it settles itself. */}
+      {meta?.my_balance > 0 && (
+        <div style={{...pad, marginTop:18}}>
+          <div style={{background:C.card, border:`1px solid ${C.hairInk}`, borderRadius:10, padding:"16px 18px"}}>
+            <div style={{display:"flex", alignItems:"baseline", gap:9, flexWrap:"wrap"}}>
+              <span style={{fontFamily:SANS, fontSize:10.5, letterSpacing:1.6,
+                textTransform:"uppercase", color:C.inkMuted}}>You owe</span>
+              <span style={{fontFamily:SERIF, fontSize:24, fontWeight:600, color:C.ink}}>
+                ${meta.my_balance.toLocaleString()}
+              </span>
+            </div>
+            <div style={{marginTop:10, display:"flex", flexDirection:"column", gap:8}}>
+              {(meta.my_charges || []).filter(c => !c.paid).map(c => (
+                <div key={c.id} style={{display:"flex", alignItems:"center", gap:10, flexWrap:"wrap"}}>
+                  <span style={{flex:1, minWidth:120, fontSize:13, color:C.inkMuted}}>
+                    Entry {MINUS} ${c.amount}
+                  </span>
+                  <a href={venmoLink(meta.venmo, c.amount, chargeNote(c))}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{fontFamily:SANS, fontSize:10.5, letterSpacing:1.4, textTransform:"uppercase",
+                      padding:"8px 14px", borderRadius:8, background:C.ink, color:C.card, textDecoration:"none"}}>
+                    Pay ${c.amount} on Venmo
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ WEEK ══ */}
       {view === "week" && (!data ? (
@@ -266,9 +316,12 @@ export default function MNFPool({ userId }) {
               ) : (
                 <>
                   <div style={{fontFamily:SERIF, fontSize:26, fontStyle:"italic",
-                    color:"rgba(239,231,218,0.55)"}}>Line not set</div>
-                  <div style={{fontSize:11, color:C.creamDim, marginTop:10, lineHeight:1.65}}>
-                    Freezes {freezeDay(game.kickoff_at)} at 9:00 AM
+                    color: lineOverdue ? "#E5A39B" : "rgba(239,231,218,0.55)"}}>Line not set</div>
+                  <div style={{fontSize:11, marginTop:10, lineHeight:1.65,
+                    color: lineOverdue ? "#E5A39B" : C.creamDim}}>
+                    {lineOverdue
+                      ? `Kickoff is inside 48 hours and the line still hasn${"\u2019"}t frozen. Nobody can pick until it does.`
+                      : `Freezes ${freezeDay(game.kickoff_at)} at 9:00 AM`}
                   </div>
                 </>
               )}
@@ -483,6 +536,89 @@ export default function MNFPool({ userId }) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ══ RULES ══ */}
+      {view === "rules" && (
+        <div style={{...pad, paddingTop:30}}>
+          <Eyebrow>House rules</Eyebrow>
+          <ul style={{margin:"18px 0 0", padding:0, listStyle:"none",
+            fontFamily:SERIF, fontSize:16, color:C.ink, lineHeight:1.95}}>
+            <li>{"·"} ${season.entry_fee} to enter</li>
+            <li>{"·"} One Monday night game a week. The picker takes a side against the spread.</li>
+            <li>{"·"} The spread freezes Wednesday morning. That number grades the week no matter
+              when the pick came in, and it never moves again.</li>
+            <li>{"·"} A push counts as a loss for the picker. He had the choice.</li>
+            <li>{"·"} No pick in by kickoff and the picker is handed the favorite.</li>
+            <li>{"·"} Picks lock at kickoff.</li>
+          </ul>
+          <div style={{fontSize:11.5, color:C.inkFaint, marginTop:24, lineHeight:1.7}}>
+            {(meta?.players || []).length} in {MINUS} $
+            {(season.entry_fee * (meta?.players || []).length).toLocaleString()} in the pot
+          </div>
+        </div>
+      )}
+
+      {/* ══ MONEY (admin) ══ */}
+      {view === "money" && (
+        <div style={{...pad, paddingTop:30}}>
+          <Eyebrow>The books</Eyebrow>
+          {!ledger ? (
+            <div style={{marginTop:18, fontSize:13.5, color:C.inkMuted}}>Loading{"…"}</div>
+          ) : (
+            <>
+              <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:18, marginBottom:22}}>
+                {[["Collected", ledger.collected, C.green],
+                  ["Outstanding", ledger.outstanding, ledger.outstanding > 0 ? C.red : C.inkMuted],
+                  ["Pot", ledger.pot, C.ink]].map(([label, value, tone]) => (
+                  <div key={label} style={{flex:"1 1 110px", background:C.card,
+                    border:`1px solid ${C.hair}`, borderRadius:10, padding:"14px 16px"}}>
+                    <div style={{fontFamily:SANS, fontSize:10, letterSpacing:1.5,
+                      textTransform:"uppercase", color:C.inkMuted}}>{label}</div>
+                    <div style={{fontFamily:SERIF, fontSize:24, fontWeight:600, color:tone, marginTop:3}}>
+                      ${Number(value).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {ledger.items.length === 0 ? (
+                <div style={{fontSize:13.5, color:C.inkMuted, lineHeight:1.7}}>Nothing owed yet.</div>
+              ) : ledger.items.map((row, i) => (
+                <div key={row.id} style={{display:"flex", alignItems:"center", gap:10, padding:"13px 0",
+                  borderBottom: i === ledger.items.length - 1 ? "none" : `1px solid ${C.hair}`}}>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{fontSize:15, fontWeight:600, color: row.paid ? C.inkFaint : C.ink}}>
+                      {row.display_name}
+                    </div>
+                    <div style={{fontSize:11.5, color:C.inkMuted, marginTop:2}}>Entry</div>
+                  </div>
+                  <span style={{fontFamily:SERIF, fontSize:17, fontWeight:600,
+                    color: row.paid ? C.inkFaint : C.ink}}>${row.amount}</span>
+                  <button onClick={async () => {
+                    setLedger(l => ({...l, items: l.items.map(x => x.id === row.id ? {...x, paid: !x.paid} : x)}));
+                    try {
+                      await call("/mark-paid", { method:"POST",
+                        body: JSON.stringify({ payment_id: row.id, paid: !row.paid }) });
+                    } catch (e) { setErr(e.message); }
+                    call("/ledger").then(setLedger).catch(()=>{});
+                  }} style={{
+                    fontFamily:SANS, fontSize:10, letterSpacing:1.4, textTransform:"uppercase",
+                    padding:"7px 12px", borderRadius:8, cursor:"pointer", minWidth:78,
+                    background: row.paid ? C.ink : "transparent",
+                    color: row.paid ? C.card : C.red,
+                    border: row.paid ? "none" : `1px solid ${C.red}`,
+                  }}>{row.paid ? "Paid" : "Unpaid"}</button>
+                </div>
+              ))}
+
+              <div style={{fontSize:11.5, color:C.inkFaint, marginTop:24, lineHeight:1.7}}>
+                Tap a row to flip it. Everyone sees their own balance with a Venmo
+                button, so this should mostly clear itself.
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
