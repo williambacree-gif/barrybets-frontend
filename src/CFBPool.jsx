@@ -50,6 +50,71 @@ const BrassRule = () => (
 
 // ═══════════════════════════════════════════════════════════════
 
+// One player's season, opened by tapping a name on the leaderboard.
+// entry is undefined while it loads, then { weeks } or { error }.
+function PickHistory({ entry }) {
+  if (!entry) return (
+    <div style={{fontSize:11.5, color:C.inkFaint, marginTop:12}}>Loading{"\u2026"}</div>
+  );
+  if (entry.error) return (
+    <div style={{fontSize:11.5, color:C.red, marginTop:12}}>{entry.error}</div>
+  );
+  if (!entry.weeks.length) return (
+    <div style={{fontSize:11.5, color:C.inkFaint, marginTop:12}}>No picks yet.</div>
+  );
+  return (
+    <div style={{marginTop:12, background:"rgba(23,32,58,0.03)",
+      border:`1px solid ${C.hair}`, borderRadius:10, padding:"2px 14px"}}>
+      {entry.weeks.map((w, i) => {
+        const tone = w.result === "win" ? C.green : w.result === "loss" ? C.red : C.inkMuted;
+        const last = i === entry.weeks.length - 1;
+        return (
+          <div key={w.pool_week} style={{display:"flex", alignItems:"baseline", gap:11,
+            padding:"11px 0", borderBottom: last ? "none" : `1px solid ${C.hair}`}}>
+            <span style={{fontFamily:SANS, fontSize:9, fontWeight:700,
+              letterSpacing:"0.1em", color:C.inkFaint, width:28, flexShrink:0}}>
+              WK{w.pool_week}
+            </span>
+            {w.hidden ? (
+              <span style={{flex:1, fontSize:12.5, color:C.inkFaint, fontStyle:"italic"}}>
+                Pick is in {"\u2014"} hidden until the week locks
+              </span>
+            ) : (
+              <>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontSize:13.5, fontWeight:600, color:C.ink}}>
+                    {w.team}
+                    {w.line && (
+                      <span style={{color:C.inkFaint, fontWeight:400}}> {w.line}</span>
+                    )}
+                  </div>
+                  <div style={{fontSize:11, color:C.inkMuted, marginTop:2}}>
+                    {w.home_away === "home" ? "vs " : "at "}{w.opponent || "TBD"}
+                  </div>
+                </div>
+                <div style={{textAlign:"right", flexShrink:0}}>
+                  <div style={{fontFamily:SERIF, fontSize:17, fontWeight:600, color:tone}}>
+                    {w.score_for == null ? "\u2014" : `${w.score_for}\u2013${w.score_against}`}
+                  </div>
+                  <div style={{fontFamily:SANS, fontSize:8.5, fontWeight:700,
+                    letterSpacing:"0.12em", color:tone, marginTop:1}}>
+                    {w.result === "win" ? "WON" : w.result === "loss" ? "LOST"
+                      : w.status === "final" ? "FINAL" : "PENDING"}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+      <div style={{fontSize:10.5, color:C.inkFaint, padding:"0 0 11px", lineHeight:1.6}}>
+        The line is shown for context only. This pool is straight up {"\u2014"} the
+        spread never decides anything.
+      </div>
+    </div>
+  );
+}
+
 export default function CFBPool({ userId }) {
   const [token, setToken]   = useState(null);
   const [season, setSeason] = useState(null);
@@ -63,6 +128,10 @@ export default function CFBPool({ userId }) {
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState("");
   const [ledger, setLedger] = useState(null);
+  // Names on the leaderboard open a season. Fetched on demand and kept,
+  // so re-opening one is instant.
+  const [openId, setOpenId] = useState(null);
+  const [hist, setHist]     = useState({});
 
   const call = useCallback(async (path, opts = {}) => {
     const res = await fetch(API + "/api/cfb" + path, {
@@ -96,6 +165,14 @@ export default function CFBPool({ userId }) {
   useEffect(() => {
     if (!token || view !== "board") call("/leaderboard").then(setBoard).catch(()=>{});
   }, [view, token, call]);
+
+  const toggleHistory = useCallback(id => {
+    setOpenId(cur => (cur === id ? null : id));
+    if (hist[id]) return;
+    call(`/history/${id}`)
+      .then(d => setHist(h => ({ ...h, [id]: { weeks: d.weeks } })))
+      .catch(e => setHist(h => ({ ...h, [id]: { error: e.message } })));
+  }, [call, hist]);
 
   useEffect(() => {
     const l = data?.lock_at;
@@ -337,10 +414,18 @@ export default function CFBPool({ userId }) {
                 borderBottom: i === board.length-1 ? "none" : `1px solid ${C.hair}`}}>
                 <div style={{display:"flex", alignItems:"baseline", gap:12}}>
                   <div style={{flex:1}}>
-                    <div style={{fontFamily:SERIF, fontSize:23, fontWeight:600,
+                    <button onClick={() => toggleHistory(p.player_id)} style={{
+                      background:"none", border:"none", padding:0, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:8, textAlign:"left",
+                      fontFamily:SERIF, fontSize:23, fontWeight:600,
                       color: p.status === "alive" ? C.ink : C.inkFaint}}>
                       {p.user_id === userId ? "You" : p.display_name}
-                    </div>
+                      <span style={{fontFamily:SANS, fontSize:13, color:C.brass,
+                        display:"inline-block", transition:"transform 0.15s",
+                        transform: openId === p.player_id ? "rotate(90deg)" : "none"}}>
+                        {"\u203A"}
+                      </span>
+                    </button>
                     <div style={{fontSize:11.5, color:C.inkMuted, marginTop:4,
                       display:"flex", alignItems:"center", gap:7, flexWrap:"wrap"}}>
                       <span>{p.status === "alive"
@@ -371,11 +456,14 @@ export default function CFBPool({ userId }) {
                       color:C.inkMuted}}>{teamName(t)}</span>
                   ))}
                 </div>
+
+                {openId === p.player_id && <PickHistory entry={hist[p.player_id]} />}
               </div>
             ))}
           </div>
 
           <div style={{fontSize:11.5, color:C.inkFaint, marginTop:26, lineHeight:1.7}}>
+            Tap a name to see every week {"—"} the team, the final score and the line.
             Teams are one and done. Buying back in doesn{"’"}t return the ones you already burned.
             Forget to pick and you{"’"}re handed the lowest ranked Top 25 team playing that week
             {" "}that you haven{"’"}t used yet.
