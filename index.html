@@ -2,11 +2,121 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#F5F2ED" />
     <title>Barry Bets</title>
+
+    <!-- Home screen. iOS ignores the manifest and reads apple-touch-icon;
+         without it the icon is a blurry screenshot of the login page. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Barry Bets" />
+
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Raleway',sans-serif;background:#F5F2ED;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{display:none}@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes glow{0%,100%{opacity:.4}50%{opacity:.8}}input::placeholder{color:rgba(232,221,208,0.35)}</style>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Raleway',sans-serif;background:#F5F2ED;-webkit-font-smoothing:antialiased}::-webkit-scrollbar{display:none}@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes glow{0%,100%{opacity:.4}50%{opacity:.8}}input::placeholder{color:rgba(232,221,208,0.35)}
+
+    /* ── Add to home screen ──────────────────────────────────────
+       A slim bar at the foot of the screen. It only ever appears on a
+       phone that has not already installed the app, and it remembers
+       being dismissed, so nobody sees it twice. */
+    #bb-install{position:fixed;left:0;right:0;bottom:0;z-index:9999;display:none;
+      background:linear-gradient(175deg,#17203A 0%,#101830 100%);color:#EFE7DA;
+      padding:16px 18px calc(16px + env(safe-area-inset-bottom));
+      box-shadow:0 -8px 28px rgba(0,0,0,.22);animation:fadeUp .3s ease both}
+    #bb-install .bb-row{display:flex;align-items:center;gap:13px;max-width:430px;margin:0 auto}
+    #bb-install img{width:42px;height:42px;border-radius:9px;flex-shrink:0}
+    #bb-install .bb-txt{flex:1;min-width:0}
+    #bb-install .bb-h{font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;font-weight:600;line-height:1.2}
+    #bb-install .bb-p{font-size:12px;line-height:1.5;color:rgba(239,231,218,.66);margin-top:3px}
+    #bb-install b{color:#C9A961;font-weight:600}
+    #bb-install button{font-family:'Raleway',sans-serif;cursor:pointer;border:none;background:none}
+    #bb-install .bb-go{background:#B08D3F;color:#17203A;font-size:11px;font-weight:700;
+      letter-spacing:.13em;padding:10px 15px;border-radius:8px;flex-shrink:0}
+    #bb-install .bb-x{color:rgba(239,231,218,.45);font-size:20px;line-height:1;padding:4px 2px;flex-shrink:0}
+    </style>
   </head>
-  <body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>
+  <body>
+    <div id="root"></div>
+
+    <div id="bb-install">
+      <div class="bb-row">
+        <img src="/apple-touch-icon.png" alt="" />
+        <div class="bb-txt">
+          <div class="bb-h">Keep Barry Bets on your phone</div>
+          <div class="bb-p" id="bb-how"></div>
+        </div>
+        <button class="bb-go" id="bb-go" style="display:none">INSTALL</button>
+        <button class="bb-x" id="bb-x" aria-label="Dismiss">&times;</button>
+      </div>
+    </div>
+
+    <script>
+    (function () {
+      var KEY = 'bb-install-dismissed';
+      var bar = document.getElementById('bb-install');
+      var how = document.getElementById('bb-how');
+      var go  = document.getElementById('bb-go');
+
+      // Already installed? Then this bar would be nagging about something
+      // that is already done.
+      var installed = window.matchMedia('(display-mode: standalone)').matches
+                   || window.navigator.standalone === true;
+      if (installed) return;
+      try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+
+      var ua = navigator.userAgent;
+      var iOS = /iPad|iPhone|iPod/.test(ua)
+             || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var android = /Android/.test(ua);
+      if (!iOS && !android) return;          // a desktop has no home screen
+
+      function show(text, button) {
+        how.innerHTML = text;
+        go.style.display = button ? 'block' : 'none';
+        bar.style.display = 'block';
+      }
+
+      document.getElementById('bb-x').onclick = function () {
+        bar.style.display = 'none';
+        try { localStorage.setItem(KEY, '1'); } catch (e) {}
+      };
+
+      // Android and Chrome hand us the real installer, so offer the button.
+      var deferred = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferred = e;
+        show('One tap and it sits on your home screen like any other app.', true);
+      });
+
+      go.onclick = function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.then(function () {
+          deferred = null;
+          bar.style.display = 'none';
+          try { localStorage.setItem(KEY, '1'); } catch (e) {}
+        });
+      };
+
+      // Safari has no installer to offer, so iPhone users get told where the
+      // button is. Android falls back to the same shape if Chrome stays quiet
+      // (it will not fire the event on a browser that cannot install).
+      setTimeout(function () {
+        if (bar.style.display === 'block') return;
+        if (iOS) {
+          show('Tap <b>Share</b> at the bottom of Safari, then <b>Add to Home Screen</b>.', false);
+        } else if (android && !deferred) {
+          show('Tap the <b>⋮</b> menu, top right, then <b>Add to Home screen</b>.', false);
+        }
+      }, 2600);
+    })();
+    </script>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
