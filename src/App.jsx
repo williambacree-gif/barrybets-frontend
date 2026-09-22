@@ -697,6 +697,63 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 
 // ─── Competition Selector (Landing Page) ─────────────────────
+// ─── Gas ticker ──────────────────────────────────────────────
+// A running national average price per gallon across the top of the home
+// screen. Nobody needs this to pick a football game, which is the point.
+// AAA is the source; if the read fails the strip removes itself rather
+// than showing a stale-looking blank.
+const GasTicker = () => {
+  const [gas, setGas] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const r = await fetch(`${API}/api/gas`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (alive && d && typeof d.price === "number") setGas(d);
+      } catch {
+        // A missing ticker is better than a broken home screen.
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  if (!gas) return null;
+
+  const base = typeof gas.week_ago === "number" ? gas.week_ago : null;
+  const diff = base === null ? null : gas.price - base;
+  const up = diff !== null && diff > 0.0005;
+  const down = diff !== null && diff < -0.0005;
+  const arrow = up ? "\u25b2" : down ? "\u25bc" : "\u2014";
+  const move = up ? "#E0806E" : down ? "#8FB07A" : "rgba(239,231,218,0.45)";
+
+  return (
+    <div style={{background:"#0B1224", padding:"9px 20px",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      gap:11, flexWrap:"wrap", fontFamily:"'Raleway'",
+      borderBottom:"1px solid rgba(201,169,97,0.20)"}}>
+      <span style={{fontSize:9.5, fontWeight:700, letterSpacing:"0.20em",
+        color:"rgba(201,169,97,0.88)", whiteSpace:"nowrap"}}>AAA NAT&rsquo;L AVG</span>
+      <span style={{fontSize:15, fontWeight:700, color:"#EFE7DA",
+        letterSpacing:"0.01em"}}>${gas.price.toFixed(3)}</span>
+      <span style={{fontSize:9.5, fontWeight:600, letterSpacing:"0.16em",
+        color:"rgba(239,231,218,0.50)"}}>/GAL</span>
+      {diff !== null && (
+        <span style={{fontSize:11, fontWeight:700, color:move,
+          letterSpacing:"0.04em", whiteSpace:"nowrap"}}>
+          {arrow} {Math.abs(diff).toFixed(3)} WK
+        </span>
+      )}
+    </div>
+  );
+};
+
 const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onCommish,onVols,isAdmin}) => {
   const greeting = (() => {
     const h = new Date().getHours();
@@ -770,6 +827,8 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
 
   return (
     <div style={{minHeight:"100vh",background:P.parchment,paddingBottom:56}}>
+
+      <GasTicker/>
 
       {/* navy crest header */}
       <div style={{background:`linear-gradient(175deg, ${P.navy} 0%, ${P.navyDeep} 100%)`,
