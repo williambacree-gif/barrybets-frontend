@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import MNFPool from './MNFPool';
 import CFBPool from './CFBPool';
+import Commish from './Commish';
 
 // ─── Supabase Client ─────────────────────────────────────────
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -695,7 +696,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 
 // ─── Competition Selector (Landing Page) ─────────────────────
-const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB}) => {
+const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onCommish,isAdmin}) => {
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -767,8 +768,19 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB}) =
           detail="Top 25 games · one team, once"
           accent="LIVE"
           onClick={()=>onCFB&&onCFB()}
-          last={true}
+          last={!isAdmin}
         />
+        {/* Only the man who runs the pool sees this. The server checks the
+            same thing again on every request, so hiding the row is a
+            courtesy rather than the actual lock. */}
+        {isAdmin && (
+          <Row
+            name="Commissioner"
+            detail="Pool health · nudges · resets"
+            onClick={()=>onCommish&&onCommish()}
+            last={true}
+          />
+        )}
       </div>
 
       <div style={{padding:"44px 28px 0",textAlign:"center"}}>
@@ -847,6 +859,91 @@ const SetPasswordScreen = ({onDone}) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// REDEEM A COMMISSIONER RESET LINK
+//
+// Someone arrives on a link Will texted him because he cannot get in.
+// This is deliberately not the Supabase recovery flow: that one goes by
+// email, and email is exactly what failed — Resend said "Delivered" while
+// Gmail filed it as spam, so the man never saw it and nothing looked
+// broken from the inside.
+// ═══════════════════════════════════════════════════════════════
+const RedeemResetScreen = ({token}) => {
+  const [pw,setPw]=useState("");
+  const [pw2,setPw2]=useState("");
+  const [msg,setMsg]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [ok,setOk]=useState(false);
+
+  const save = async () => {
+    if (pw.length < 8) { setMsg("Pick a password of at least 8 characters"); return; }
+    if (pw !== pw2) { setMsg("Those two don't match"); return; }
+    setSaving(true); setMsg("");
+    try {
+      const res = await fetch(API + "/api/auth/redeem-reset", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({token, password: pw}),
+      });
+      const body = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(body.error || "That didn't work");
+      setOk(true);
+    } catch(err) { setMsg(err.message); }
+    setSaving(false);
+  };
+
+  const field = {width:"100%",padding:"16px",borderRadius:C.rSm,border:`1px solid ${C.border}`,
+    background:"#3D4238",color:C.cream,fontSize:15,fontFamily:"'Raleway'",marginBottom:12,
+    outline:"none",boxSizing:"border-box"};
+
+  const shell = {minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",
+    justifyContent:"center",padding:"40px 32px",
+    background:`radial-gradient(ellipse at 50% 30%,#232838 0%,${C.navy} 60%,${C.navyDark} 100%)`};
+
+  if (ok) return (
+    <div style={shell}>
+      <HexLogo size={80} dark={true}/>
+      <h2 style={{fontSize:22,color:C.cream,fontFamily:"'Cormorant Garamond', serif",margin:"20px 0 8px"}}>
+        You{"'"}re set
+      </h2>
+      <p style={{color:C.creamSubtle,fontSize:12.5,fontFamily:"'Raleway'",marginBottom:22,
+        textAlign:"center",lineHeight:1.65,maxWidth:300}}>
+        Password changed. Sign in with it and you{"'"}re back in the pool.
+      </p>
+      <button onClick={()=>{window.location.href = window.location.origin;}}
+        style={{width:"100%",maxWidth:360,padding:"17px",borderRadius:C.rSm,border:"none",
+        background:C.gold,color:C.navyDark,fontSize:13,fontWeight:700,letterSpacing:"0.18em",
+        cursor:"pointer",fontFamily:"'Raleway'"}}>SIGN IN</button>
+    </div>
+  );
+
+  return (
+    <div style={shell}>
+      <HexLogo size={80} dark={true}/>
+      <h2 style={{fontSize:22,color:C.cream,fontFamily:"'Cormorant Garamond', serif",margin:"20px 0 8px"}}>
+        Set Your Password
+      </h2>
+      <p style={{color:C.creamSubtle,fontSize:12.5,fontFamily:"'Raleway'",marginBottom:20,
+        textAlign:"center",lineHeight:1.65,maxWidth:300}}>
+        Pick something you{"'"}ll remember. This link works once.
+      </p>
+      <div style={{width:"100%",maxWidth:360}}>
+        <input style={field} type="password" placeholder="New password" value={pw}
+          onChange={e=>setPw(e.target.value)}/>
+        <input style={field} type="password" placeholder="Again, to be sure" value={pw2}
+          onChange={e=>setPw2(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter")save();}}/>
+        {msg && <p style={{color:C.red,fontSize:12,fontFamily:"'Raleway'",marginBottom:12,
+          lineHeight:1.55}}>{msg}</p>}
+        <button onClick={save} disabled={saving} style={{width:"100%",padding:"17px",
+          borderRadius:C.rSm,border:"none",background:C.gold,color:C.navyDark,fontSize:13,
+          fontWeight:700,letterSpacing:"0.18em",cursor:"pointer",fontFamily:"'Raleway'",
+          opacity:saving?0.6:1}}>{saving?"SAVING…":"SET PASSWORD"}</button>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 export default function BarryBets() {
@@ -856,6 +953,13 @@ export default function BarryBets() {
   const [entry,setEntry]=useState(null);
   const [displayName,setDisplayName]=useState("");
   const [selectedCompetition,setSelectedCompetition]=useState(null);
+  const [isAdmin,setIsAdmin]=useState(false);
+  // A commissioner-issued reset link. Read straight from the query string,
+  // because the man holding it is by definition not signed in.
+  const [resetToken] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("reset");
+  });
   // Arriving on a recovery link. Read the hash before supabase-js consumes
   // it, and also listen for the event, because whichever lands first wins.
   const [recovery,setRecovery]=useState(
@@ -884,6 +988,16 @@ export default function BarryBets() {
       setDisplayName(name);
       const {data:entries} = await supabase.from("entries").select("*").eq("league_id", LEAGUE_ID).eq("user_id", user.id).limit(1);
       if (entries && entries.length > 0) setEntry(entries[0]);
+
+      // Ask the server whether this user runs the pool rather than keeping a
+      // second copy of that rule in the browser, where it could drift.
+      try {
+        const {data:{session}} = await supabase.auth.getSession();
+        const r = await fetch(API + "/api/cfb/season", {
+          headers:{Authorization:`Bearer ${session?.access_token}`},
+        });
+        if (r.ok) { const d = await r.json(); setIsAdmin(!!d.is_admin); }
+      } catch { /* not being admin is the safe default */ }
     })();
   },[user]);
 
@@ -909,6 +1023,9 @@ export default function BarryBets() {
   const app={fontFamily:"'Raleway', sans-serif",background:C.pageBg,color:C.cream,minHeight:"100vh",maxWidth:430,margin:"0 auto",position:"relative"};
 
   if (loading) return <div style={app}><div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",color:C.textMid}}>Loading...</div></div>;
+  // Before the login screen: a reset link has to work for someone who
+  // cannot get in, which is the whole reason it exists.
+  if (resetToken) return <div style={app}><RedeemResetScreen token={resetToken}/></div>;
   if (!user) return <div style={app}><LoginScreen onLogin={handleLogin}/></div>;
   if (recovery) return <div style={app}><SetPasswordScreen onDone={()=>{
     setRecovery(false);
@@ -916,7 +1033,7 @@ export default function BarryBets() {
   }}/></div>;
   if (!selectedCompetition) return (
     <div style={app}>
-      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}} onCFB={()=>{setSelectedCompetition("cfb");}}/>
+      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}} onCFB={()=>{setSelectedCompetition("cfb");}} onCommish={()=>{setSelectedCompetition("commish");}} isAdmin={isAdmin}/>
     </div>
   );
 
@@ -936,6 +1053,26 @@ export default function BarryBets() {
       </div>
       <div style={{paddingTop:49}}>
         <CFBPool userId={user?.id} userName={displayName}/>
+      </div>
+    </div>
+  );
+
+  if (selectedCompetition === "commish") return (
+    <div style={app}>
+      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,
+        background:"rgba(242,238,230,0.92)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+        padding:"14px 22px",display:"flex",alignItems:"center",zIndex:99,
+        borderBottom:"1px solid rgba(23,32,58,0.07)"}}>
+        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:"none",border:"none",
+          padding:0,color:C.textLight,fontSize:13,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",
+          display:"flex",alignItems:"center",gap:5}}>
+          <span style={{fontSize:17,lineHeight:1}}>{"\u2039"}</span> Barry Bets
+        </button>
+        <span style={{position:"absolute",left:"50%",transform:"translateX(-50%)",fontSize:12.5,
+          color:C.textDark,fontFamily:"'Raleway'",fontWeight:600,whiteSpace:"nowrap"}}>Commissioner</span>
+      </div>
+      <div style={{paddingTop:49}}>
+        <Commish/>
       </div>
     </div>
   );
