@@ -168,10 +168,10 @@ export default function Vols() {
                 )}
                 <span style={{fontSize:12.5, color:C.inkFaint}}>{ago(s.published_at)}</span>
               </div>
-              <div style={{fontFamily:SERIF, fontSize:20.5, fontWeight:600, color:C.ink,
-                lineHeight:1.26, letterSpacing:"-0.01em"}}>{s.title}</div>
+              <div style={{fontFamily:SERIF, fontSize:22.5, fontWeight:600, color:C.ink,
+                lineHeight:1.24, letterSpacing:"-0.01em"}}>{s.title}</div>
               {s.summary && (
-                <div style={{fontSize:14.5, color:C.inkMuted, lineHeight:1.62, marginTop:7}}>
+                <div style={{fontSize:15.5, color:C.inkMuted, lineHeight:1.6, marginTop:8}}>
                   {s.summary}
                 </div>
               )}
@@ -212,10 +212,10 @@ export default function Vols() {
               marginTop:4, marginBottom:10}}>
             <div style={{fontSize:11, fontWeight:700, letterSpacing:"0.14em",
               color:C.inkFaint, marginBottom:5}}>SUBSCRIBERS ONLY</div>
-            <div style={{fontFamily:SERIF, fontSize:18, fontWeight:600, color:C.ink}}>
+            <div style={{fontFamily:SERIF, fontSize:19.5, fontWeight:600, color:C.ink}}>
               Volquest
             </div>
-            <div style={{fontSize:12.5, color:C.inkMuted, marginTop:5, lineHeight:1.6}}>
+            <div style={{fontSize:13.5, color:C.inkMuted, marginTop:5, lineHeight:1.6}}>
               Their reporting stays on their site. Tap through if you have a login.
             </div>
           </a>
