@@ -731,12 +731,12 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
       <div style={{flex:1, minWidth:0}}>
         <div style={{fontFamily:"'Cormorant Garamond', serif", fontSize:27, fontWeight:600,
           color:P.navy, lineHeight:1.15, letterSpacing:"-0.01em"}}>{name}</div>
-        <div style={{fontSize:12, color:"rgba(23,32,58,0.52)", marginTop:6,
+        <div style={{fontSize:13, color:"rgba(23,32,58,0.70)", marginTop:6,
           letterSpacing:"0.02em"}}>{detail}</div>
       </div>
-      {accent && <span style={{fontSize:9, fontWeight:700, letterSpacing:"0.18em",
+      {accent && <span style={{fontSize:10, fontWeight:700, letterSpacing:"0.18em",
         color: tone || P.brass, flexShrink:0}}>{accent}</span>}
-      <span style={{fontSize:20, color: tone ? tone : "rgba(23,32,58,0.24)",
+      <span style={{fontSize:20, color: tone ? tone : "rgba(23,32,58,0.40)",
         opacity: tone ? 0.75 : 1, flexShrink:0, lineHeight:1}}>{"›"}</span>
     </button>
   );
@@ -759,7 +759,7 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
           <div style={{marginTop:2,opacity:0.95}}><HexLogo size={50} dark={true}/></div>
         </div>
         <div style={{marginTop:30}}><Rule/></div>
-        <div style={{fontSize:9,color:"rgba(239,231,218,0.42)",fontFamily:"'Raleway'",
+        <div style={{fontSize:10,color:"rgba(239,231,218,0.62)",fontFamily:"'Raleway'",
           letterSpacing:"0.24em",textAlign:"center",marginTop:14}}>EST. 2026</div>
       </div>
 
@@ -800,16 +800,16 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
 
       <div style={{padding:"44px 28px 0",textAlign:"center"}}>
         <button onClick={onLogout} style={{background:"none",border:"none",cursor:"pointer",
-          color:"rgba(23,32,58,0.42)",fontSize:10,fontWeight:700,fontFamily:"'Raleway'",
+          color:"rgba(23,32,58,0.60)",fontSize:11,fontWeight:700,fontFamily:"'Raleway'",
           letterSpacing:"0.2em"}}>SIGN OUT</button>
       </div>
 
       <div style={{textAlign:"center",marginTop:44}}>
-        <p style={{color:"rgba(23,32,58,0.3)",fontSize:13,fontFamily:"'Cormorant Garamond', serif",
+        <p style={{color:"rgba(23,32,58,0.48)",fontSize:14,fontFamily:"'Cormorant Garamond', serif",
           fontStyle:"italic",lineHeight:1.85,margin:0}}>
           Why do we lock our doors?<br/>{"…"}to keep Blair out
         </p>
-        <div style={{color:"rgba(23,32,58,0.2)",fontSize:9,fontFamily:"'Raleway'",
+        <div style={{color:"rgba(23,32,58,0.38)",fontSize:10,fontFamily:"'Raleway'",
           letterSpacing:"0.22em",marginTop:16}}>BARRYSBETS.NET</div>
       </div>
     </div>

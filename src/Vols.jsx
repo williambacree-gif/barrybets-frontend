@@ -20,8 +20,8 @@ const API = import.meta.env.VITE_API_URL;
 
 const C = {
   bg:"#F2EEE6", card:"#FBF9F5", navy:"#17203A", navyDeep:"#101830",
-  cream:"#EFE7DA", creamDim:"rgba(239,231,218,0.62)",
-  ink:"#17203A", inkMuted:"rgba(23,32,58,0.56)", inkFaint:"rgba(23,32,58,0.34)",
+  cream:"#EFE7DA", creamDim:"rgba(239,231,218,0.80)",
+  ink:"#17203A", inkMuted:"rgba(23,32,58,0.74)", inkFaint:"rgba(23,32,58,0.56)",
   hair:"rgba(23,32,58,0.10)", hairInk:"rgba(23,32,58,0.16)",
   orange:"#FF8200",                       // Tennessee orange, the real one
   orangeDim:"rgba(255,130,0,0.13)",
@@ -95,14 +95,14 @@ export default function Vols() {
 
       {/* header — parchment, so the navy outline on the orange reads */}
       <div style={{background:C.bg, padding:"30px 26px 0"}}>
-        <div style={{fontSize:10, color:C.navy, letterSpacing:"0.3em", fontWeight:700}}>
+        <div style={{fontSize:11, color:C.navy, letterSpacing:"0.3em", fontWeight:700}}>
           TENNESSEE
         </div>
         <h1 style={{fontSize:46, fontWeight:700, margin:"10px 0 0",
           fontFamily:SERIF, lineHeight:1.02, letterSpacing:"-0.02em", ...WORDMARK}}>
           Vol Report
         </h1>
-        <p style={{fontSize:13, color:C.inkMuted, margin:"12px 0 0", lineHeight:1.65}}>
+        <p style={{fontSize:14, color:C.inkMuted, margin:"12px 0 0", lineHeight:1.65}}>
           Headlines and video from around the program. Tap one to read or watch
           it at the source.
         </p>
@@ -112,7 +112,7 @@ export default function Vols() {
       <div style={{padding:"22px 22px 0"}}>
 
         {loading && (
-          <div style={{color:C.inkFaint, fontSize:13, textAlign:"center", padding:"40px 0"}}>
+          <div style={{color:C.inkFaint, fontSize:14, textAlign:"center", padding:"40px 0"}}>
             Pulling the latest…
           </div>
         )}
@@ -160,18 +160,18 @@ export default function Vols() {
 
             <div style={{padding:"15px 16px"}}>
               <div style={{display:"flex", alignItems:"baseline", gap:8, marginBottom:7}}>
-                <span style={{fontSize:10, fontWeight:700, letterSpacing:"0.14em",
+                <span style={{fontSize:11, fontWeight:700, letterSpacing:"0.14em",
                   color:C.orange, textTransform:"uppercase"}}>{s.source}</span>
                 {s.kind === "video" && (
-                  <span style={{fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+                  <span style={{fontSize:10.5, fontWeight:700, letterSpacing:"0.12em",
                     color:C.inkFaint}}>VIDEO</span>
                 )}
-                <span style={{fontSize:11.5, color:C.inkFaint}}>{ago(s.published_at)}</span>
+                <span style={{fontSize:12.5, color:C.inkFaint}}>{ago(s.published_at)}</span>
               </div>
               <div style={{fontFamily:SERIF, fontSize:20.5, fontWeight:600, color:C.ink,
                 lineHeight:1.26, letterSpacing:"-0.01em"}}>{s.title}</div>
               {s.summary && (
-                <div style={{fontSize:13.5, color:C.inkMuted, lineHeight:1.62, marginTop:7}}>
+                <div style={{fontSize:14.5, color:C.inkMuted, lineHeight:1.62, marginTop:7}}>
                   {s.summary}
                 </div>
               )}
@@ -184,7 +184,7 @@ export default function Vols() {
             it just gets you there in one tap. */}
         {!loading && (data && data.follow || []).length > 0 && (
           <div style={{marginTop:16, marginBottom:6}}>
-            <div style={{fontSize:9, fontFamily:SANS, fontWeight:700,
+            <div style={{fontSize:10.5, fontFamily:SANS, fontWeight:700,
               letterSpacing:"0.22em", color:C.brass, marginBottom:11}}>
               STRAIGHT TO X
             </div>
@@ -210,7 +210,7 @@ export default function Vols() {
             style={{display:"block", textDecoration:"none", background:"transparent",
               border:`1px dashed ${C.hairInk}`, borderRadius:12, padding:"14px 16px",
               marginTop:4, marginBottom:10}}>
-            <div style={{fontSize:10, fontWeight:700, letterSpacing:"0.14em",
+            <div style={{fontSize:11, fontWeight:700, letterSpacing:"0.14em",
               color:C.inkFaint, marginBottom:5}}>SUBSCRIBERS ONLY</div>
             <div style={{fontFamily:SERIF, fontSize:18, fontWeight:600, color:C.ink}}>
               Volquest
@@ -226,7 +226,7 @@ export default function Vols() {
           <div style={{marginTop:6}}>
             <button onClick={() => setShowSources(v => !v)}
               style={{background:"none", border:"none", cursor:"pointer", padding:"8px 0",
-                color:C.inkFaint, fontSize:10, fontWeight:700, letterSpacing:"0.16em",
+                color:C.inkFaint, fontSize:11, fontWeight:700, letterSpacing:"0.16em",
                 fontFamily:SANS}}>
               {showSources ? "HIDE SOURCES" : `${working.length} OF ${sources.length} SOURCES LIVE`}
             </button>
@@ -251,10 +251,10 @@ export default function Vols() {
         <div style={{textAlign:"center", padding:"16px 0 0"}}>
           <button onClick={() => { setLoading(true); load(); }}
             style={{background:"none", border:"none", cursor:"pointer", color:C.inkFaint,
-              fontSize:10, fontWeight:700, letterSpacing:"0.2em", fontFamily:SANS}}>
+              fontSize:11, fontWeight:700, letterSpacing:"0.2em", fontFamily:SANS}}>
             REFRESH
           </button>
-          <div style={{fontSize:10, color:C.inkFaint, marginTop:10, lineHeight:1.6}}>
+          <div style={{fontSize:11, color:C.inkFaint, marginTop:10, lineHeight:1.6}}>
             Cached for fifteen minutes, so refreshing twice shows the same thing.
           </div>
         </div>
