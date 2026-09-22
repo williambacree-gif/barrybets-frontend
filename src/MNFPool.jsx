@@ -27,6 +27,16 @@ const C = {
 };
 const SERIF = "'Cormorant Garamond', Georgia, serif";
 const SANS  = "'Raleway', -apple-system, BlinkMacSystemFont, sans-serif";
+// Weeks 19 and up are the playoffs. "Week 21" means nothing to anyone;
+// "Conference" does.
+const WEEK_LABEL = {
+  19: "Wild Card",
+  20: "Divisional",
+  21: "Conference",
+  22: "Super Bowl",
+};
+const weekName = n => WEEK_LABEL[n] || `Week ${n}`;
+
 const MINUS = "−";
 const NDASH = "–";
 
@@ -636,7 +646,7 @@ export default function MNFPool({ userId }) {
               <div key={w.week_no} style={{padding:"18px 0",
                 borderBottom: i === schedule.length-1 ? "none" : `1px solid ${C.hair}`}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
-                  <span style={{fontSize:13, fontWeight:700, letterSpacing:"0.04em"}}>Week {w.week_no}</span>
+                  <span style={{fontSize:13, fontWeight:700, letterSpacing:"0.04em"}}>{weekName(w.week_no)}</span>
                   <span style={{fontSize:12, color:C.inkMuted}}>
                     {w.game ? `${lastWord(w.game.away_team)} at ${lastWord(w.game.home_team)}` : "TBD"}
                     {w.game && ` · ${shortDay(w.game.kickoff_at)}`}
@@ -678,6 +688,8 @@ export default function MNFPool({ userId }) {
             fontFamily:SERIF, fontSize:16, color:C.ink, lineHeight:1.95}}>
             <li>{"·"} ${season.entry_fee} to enter</li>
             <li>{"·"} Three rounds a week: Thursday night, Sunday night, Monday night.</li>
+            <li>{"·"} The playoffs count too, every game of them — six on wild card
+              weekend, four divisional, two conference, and the Super Bowl.</li>
             <li>{"·"} Every man plays every night, and over the week you face each of the
               other three once.</li>
             <li>{"·"} One player in each matchup holds the pick. He takes a side against the
