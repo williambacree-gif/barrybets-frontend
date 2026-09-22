@@ -30,6 +30,21 @@ const C = {
 const SERIF = "'Cormorant Garamond', Georgia, serif";
 const SANS  = "'Raleway', -apple-system, BlinkMacSystemFont, sans-serif";
 
+// Orange letters with a navy outline. The outline only reads against a
+// LIGHT background — on the navy header the other screens use, navy-on-navy
+// would simply disappear — so this header sits on parchment instead.
+//
+// paint-order puts the stroke behind the fill so the letterforms keep their
+// shape instead of being eaten from the inside. The shadow ring is the
+// fallback for anything that ignores paint-order.
+const WORDMARK = {
+  color: "#FF8200",
+  WebkitTextStrokeWidth: "1.6px",
+  WebkitTextStrokeColor: "#101830",
+  paintOrder: "stroke fill",
+  textShadow: "0 2px 0 rgba(16,24,48,0.18)",
+};
+
 // "14m", "3h", "yesterday", "Sep 18" — short enough to sit beside a source.
 function ago(iso) {
   if (!iso) return "";
@@ -78,20 +93,20 @@ export default function Vols() {
   return (
     <div style={{background:C.bg, minHeight:"100vh", paddingBottom:70, fontFamily:SANS}}>
 
-      {/* header — navy, with the orange rule doing the work */}
-      <div style={{background:`linear-gradient(175deg,${C.navy} 0%,${C.navyDeep} 100%)`,
-        padding:"34px 26px 0"}}>
-        <div style={{fontSize:9, color:C.orange, letterSpacing:"0.3em", fontWeight:700}}>
+      {/* header — parchment, so the navy outline on the orange reads */}
+      <div style={{background:C.bg, padding:"30px 26px 0"}}>
+        <div style={{fontSize:10, color:C.navy, letterSpacing:"0.3em", fontWeight:700}}>
           TENNESSEE
         </div>
-        <h1 style={{fontSize:34, fontWeight:500, margin:"12px 0 0", color:C.cream,
-          fontFamily:SERIF, lineHeight:1.05, letterSpacing:"-0.015em"}}>
+        <h1 style={{fontSize:46, fontWeight:700, margin:"10px 0 0",
+          fontFamily:SERIF, lineHeight:1.02, letterSpacing:"-0.02em", ...WORDMARK}}>
           Vol Report
         </h1>
-        <p style={{fontSize:11.5, color:C.creamDim, margin:"10px 0 0", lineHeight:1.6}}>
-          Headlines from around the program. Tap one to read it at the source.
+        <p style={{fontSize:13, color:C.inkMuted, margin:"12px 0 0", lineHeight:1.65}}>
+          Headlines and video from around the program. Tap one to read or watch
+          it at the source.
         </p>
-        <div style={{height:3, background:C.orange, margin:"22px -26px 0"}}/>
+        <div style={{height:4, background:C.orange, margin:"20px -26px 0"}}/>
       </div>
 
       <div style={{padding:"22px 22px 0"}}>
@@ -110,7 +125,7 @@ export default function Vols() {
 
         {!loading && !err && stories.length === 0 && (
           <div style={{background:C.card, border:`1px solid ${C.hair}`, borderRadius:14,
-            padding:20, fontSize:13, color:C.inkMuted, lineHeight:1.65}}>
+            padding:20, fontSize:14, color:C.inkMuted, lineHeight:1.68}}>
             Nothing came back from any source just now. That is a problem with the
             feeds rather than a quiet news day — the Commissioner screen can say which.
           </div>
@@ -120,21 +135,72 @@ export default function Vols() {
           <a key={i} href={s.url} target="_blank" rel="noopener noreferrer"
             style={{display:"block", textDecoration:"none", background:C.card,
               border:`1px solid ${C.hair}`, borderLeft:`3px solid ${C.orange}`,
-              borderRadius:12, padding:"15px 16px", marginBottom:10}}>
-            <div style={{display:"flex", alignItems:"baseline", gap:8, marginBottom:6}}>
-              <span style={{fontSize:9, fontWeight:700, letterSpacing:"0.14em",
-                color:C.orange, textTransform:"uppercase"}}>{s.source}</span>
-              <span style={{fontSize:10.5, color:C.inkFaint}}>{ago(s.published_at)}</span>
-            </div>
-            <div style={{fontFamily:SERIF, fontSize:18, fontWeight:600, color:C.ink,
-              lineHeight:1.28, letterSpacing:"-0.01em"}}>{s.title}</div>
-            {s.summary && (
-              <div style={{fontSize:12, color:C.inkMuted, lineHeight:1.6, marginTop:6}}>
-                {s.summary}
+              borderRadius:12, overflow:"hidden", marginBottom:11}}>
+
+            {/* A video leads with its thumbnail — it is the whole reason you
+                stop scrolling. Straight from YouTube's own image host, the
+                same URL their share and embed use. */}
+            {s.kind === "video" && s.thumbnail && (
+              <div style={{position:"relative", background:"#0B0F1A"}}>
+                <img src={s.thumbnail} alt="" loading="lazy"
+                  style={{width:"100%", display:"block", aspectRatio:"16 / 9",
+                    objectFit:"cover"}}/>
+                <div style={{position:"absolute", inset:0, display:"flex",
+                  alignItems:"center", justifyContent:"center"}}>
+                  <div style={{width:52, height:52, borderRadius:"50%",
+                    background:"rgba(255,130,0,0.92)", display:"flex",
+                    alignItems:"center", justifyContent:"center",
+                    boxShadow:"0 2px 14px rgba(0,0,0,0.4)"}}>
+                    <span style={{color:"#101830", fontSize:19, marginLeft:3,
+                      lineHeight:1}}>{"\u25B6"}</span>
+                  </div>
+                </div>
               </div>
             )}
+
+            <div style={{padding:"15px 16px"}}>
+              <div style={{display:"flex", alignItems:"baseline", gap:8, marginBottom:7}}>
+                <span style={{fontSize:10, fontWeight:700, letterSpacing:"0.14em",
+                  color:C.orange, textTransform:"uppercase"}}>{s.source}</span>
+                {s.kind === "video" && (
+                  <span style={{fontSize:9, fontWeight:700, letterSpacing:"0.12em",
+                    color:C.inkFaint}}>VIDEO</span>
+                )}
+                <span style={{fontSize:11.5, color:C.inkFaint}}>{ago(s.published_at)}</span>
+              </div>
+              <div style={{fontFamily:SERIF, fontSize:20.5, fontWeight:600, color:C.ink,
+                lineHeight:1.26, letterSpacing:"-0.01em"}}>{s.title}</div>
+              {s.summary && (
+                <div style={{fontSize:13.5, color:C.inkMuted, lineHeight:1.62, marginTop:7}}>
+                  {s.summary}
+                </div>
+              )}
+            </div>
           </a>
         ))}
+
+        {/* One-tap to the feeds themselves. Reading posts out of Twitter
+            needs a $200-a-month API key, so the app does not pretend to —
+            it just gets you there in one tap. */}
+        {!loading && (data && data.follow || []).length > 0 && (
+          <div style={{marginTop:16, marginBottom:6}}>
+            <div style={{fontSize:9, fontFamily:SANS, fontWeight:700,
+              letterSpacing:"0.22em", color:C.brass, marginBottom:11}}>
+              STRAIGHT TO X
+            </div>
+            <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+              {data.follow.map((f, i) => (
+                <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
+                  style={{textDecoration:"none", background:C.card,
+                    border:`1px solid ${C.hairInk}`, borderRadius:20,
+                    padding:"10px 15px", fontSize:12.5, fontWeight:600,
+                    color:C.ink, fontFamily:SANS}}>
+                  {f.name}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Volquest gets a link, not a scrape. Will pays for it; the other
             three do not, and republishing it here would be lifting the
@@ -144,12 +210,12 @@ export default function Vols() {
             style={{display:"block", textDecoration:"none", background:"transparent",
               border:`1px dashed ${C.hairInk}`, borderRadius:12, padding:"14px 16px",
               marginTop:4, marginBottom:10}}>
-            <div style={{fontSize:9, fontWeight:700, letterSpacing:"0.14em",
+            <div style={{fontSize:10, fontWeight:700, letterSpacing:"0.14em",
               color:C.inkFaint, marginBottom:5}}>SUBSCRIBERS ONLY</div>
-            <div style={{fontFamily:SERIF, fontSize:16, fontWeight:600, color:C.ink}}>
+            <div style={{fontFamily:SERIF, fontSize:18, fontWeight:600, color:C.ink}}>
               Volquest
             </div>
-            <div style={{fontSize:11.5, color:C.inkMuted, marginTop:4, lineHeight:1.55}}>
+            <div style={{fontSize:12.5, color:C.inkMuted, marginTop:5, lineHeight:1.6}}>
               Their reporting stays on their site. Tap through if you have a login.
             </div>
           </a>
@@ -171,8 +237,8 @@ export default function Vols() {
                   <div key={i} style={{display:"flex", justifyContent:"space-between",
                     alignItems:"baseline", padding:"9px 0", gap:12,
                     borderBottom: i === sources.length-1 ? "none" : `1px solid ${C.hair}`}}>
-                    <span style={{fontSize:12, color:C.ink}}>{s.name}</span>
-                    <span style={{fontSize:11, color: s.ok && s.count ? C.inkMuted : "#9E3B33"}}>
+                    <span style={{fontSize:13, color:C.ink}}>{s.name}</span>
+                    <span style={{fontSize:12, color: s.ok && s.count ? C.inkMuted : "#9E3B33"}}>
                       {s.ok && s.count ? `${s.count} stories` : (s.error || "nothing")}
                     </span>
                   </div>
