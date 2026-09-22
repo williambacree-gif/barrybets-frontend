@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import MNFPool from './MNFPool';
 import CFBPool from './CFBPool';
 import Commish from './Commish';
+import Vols from './Vols';
 
 // ─── Supabase Client ─────────────────────────────────────────
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -696,7 +697,7 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
 
 
 // ─── Competition Selector (Landing Page) ─────────────────────
-const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onCommish,isAdmin}) => {
+const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onCommish,onVols,isAdmin}) => {
   const greeting = (() => {
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -714,7 +715,13 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
     </div>
   );
 
-  const Row = ({name, detail, accent, onClick, last}) => (
+  // Tennessee orange, used as an accent rather than a coat of paint. The
+  // app's identity is navy and brass; one orange row reads as "this is the
+  // Vols thing", where an orange homepage would just look like a different
+  // app.
+  const ORANGE = "#FF8200";
+
+  const Row = ({name, detail, accent, onClick, last, tone}) => (
     <button onClick={onClick} style={{
       width:"100%", display:"flex", alignItems:"center", gap:16, padding:"26px 0",
       background:"none", border:"none",
@@ -728,8 +735,9 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
           letterSpacing:"0.02em"}}>{detail}</div>
       </div>
       {accent && <span style={{fontSize:9, fontWeight:700, letterSpacing:"0.18em",
-        color:P.brass, flexShrink:0}}>{accent}</span>}
-      <span style={{fontSize:20, color:"rgba(23,32,58,0.24)", flexShrink:0, lineHeight:1}}>{"›"}</span>
+        color: tone || P.brass, flexShrink:0}}>{accent}</span>}
+      <span style={{fontSize:20, color: tone ? tone : "rgba(23,32,58,0.24)",
+        opacity: tone ? 0.75 : 1, flexShrink:0, lineHeight:1}}>{"›"}</span>
     </button>
   );
 
@@ -768,6 +776,13 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
           detail="Top 25 games · one team, once"
           accent="LIVE"
           onClick={()=>onCFB&&onCFB()}
+        />
+        <Row
+          name="Vol Report"
+          detail="Tennessee headlines from around the program"
+          accent="VOLS"
+          tone={ORANGE}
+          onClick={()=>onVols&&onVols()}
           last={!isAdmin}
         />
         {/* Only the man who runs the pool sees this. The server checks the
@@ -1033,7 +1048,7 @@ export default function BarryBets() {
   }}/></div>;
   if (!selectedCompetition) return (
     <div style={app}>
-      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}} onCFB={()=>{setSelectedCompetition("cfb");}} onCommish={()=>{setSelectedCompetition("commish");}} isAdmin={isAdmin}/>
+      <CompetitionSelector user={user} displayName={displayName} onSelect={(id)=>{setSelectedCompetition(id);}} onLogout={handleLogout} onMNF={()=>{setSelectedCompetition("mnf");}} onCFB={()=>{setSelectedCompetition("cfb");}} onCommish={()=>{setSelectedCompetition("commish");}} onVols={()=>{setSelectedCompetition("vols");}} isAdmin={isAdmin}/>
     </div>
   );
 
@@ -1053,6 +1068,26 @@ export default function BarryBets() {
       </div>
       <div style={{paddingTop:49}}>
         <CFBPool userId={user?.id} userName={displayName}/>
+      </div>
+    </div>
+  );
+
+  if (selectedCompetition === "vols") return (
+    <div style={app}>
+      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,
+        background:"rgba(242,238,230,0.92)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+        padding:"14px 22px",display:"flex",alignItems:"center",zIndex:99,
+        borderBottom:"1px solid rgba(23,32,58,0.07)"}}>
+        <button onClick={()=>{setSelectedCompetition(null);}} style={{background:"none",border:"none",
+          padding:0,color:C.textLight,fontSize:13,fontWeight:600,fontFamily:"'Raleway'",cursor:"pointer",
+          display:"flex",alignItems:"center",gap:5}}>
+          <span style={{fontSize:17,lineHeight:1}}>{"\u2039"}</span> Barry Bets
+        </button>
+        <span style={{position:"absolute",left:"50%",transform:"translateX(-50%)",fontSize:12.5,
+          color:C.textDark,fontFamily:"'Raleway'",fontWeight:600,whiteSpace:"nowrap"}}>Vol Report</span>
+      </div>
+      <div style={{paddingTop:49}}>
+        <Vols/>
       </div>
     </div>
   );
