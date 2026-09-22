@@ -741,6 +741,33 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
     </button>
   );
 
+  // The Vol Report is what brings them back on a Tuesday, so it sits above
+  // the pools as a filled orange card rather than a third row competing for
+  // attention. White on orange, which is how Tennessee paints it.
+  const VolBanner = () => (
+    <button onClick={()=>onVols&&onVols()} style={{
+      width:"100%", display:"block", border:"none", borderRadius:14,
+      padding:"22px 24px", cursor:"pointer", textAlign:"left",
+      fontFamily:"'Raleway'",
+      background:`linear-gradient(135deg, ${ORANGE} 0%, #E86F00 100%)`,
+      boxShadow:"0 6px 20px rgba(255,130,0,0.30)",
+    }}>
+      <div style={{display:"flex", alignItems:"center", gap:16}}>
+        <div style={{flex:1, minWidth:0}}>
+          <div style={{fontSize:10, fontWeight:700, letterSpacing:"0.22em",
+            color:"rgba(255,255,255,0.85)"}}>VOLS</div>
+          <div style={{fontFamily:"'Cormorant Garamond', serif", fontSize:31,
+            fontWeight:600, color:"#FFFFFF", lineHeight:1.12,
+            letterSpacing:"-0.01em", marginTop:4}}>Vol Report</div>
+          <div style={{fontSize:13, color:"rgba(255,255,255,0.90)", marginTop:5,
+            letterSpacing:"0.02em"}}>Tennessee headlines from around the program</div>
+        </div>
+        <span style={{fontSize:23, color:"#FFFFFF", flexShrink:0,
+          lineHeight:1}}>{"\u203a"}</span>
+      </div>
+    </button>
+  );
+
   return (
     <div style={{minHeight:"100vh",background:P.parchment,paddingBottom:56}}>
 
@@ -763,8 +790,11 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
           letterSpacing:"0.24em",textAlign:"center",marginTop:14}}>EST. 2026</div>
       </div>
 
+      {/* the Vols banner, above the pools */}
+      <div style={{padding:"22px 28px 2px"}}><VolBanner/></div>
+
       {/* competitions */}
-      <div style={{padding:"14px 28px 0"}}>
+      <div style={{padding:"6px 28px 0"}}>
         <Row
           name="Monday Night Football"
           detail="Head to head against the spread"
@@ -776,13 +806,6 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
           detail="Top 25 games · one team, once"
           accent="LIVE"
           onClick={()=>onCFB&&onCFB()}
-        />
-        <Row
-          name="Vol Report"
-          detail="Tennessee headlines from around the program"
-          accent="VOLS"
-          tone={ORANGE}
-          onClick={()=>onVols&&onVols()}
           last={!isAdmin}
         />
         {/* Only the man who runs the pool sees this. The server checks the
