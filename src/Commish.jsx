@@ -254,24 +254,36 @@ export default function Commish() {
 
         <Rule/>
 
-        {/* ── nudge ── */}
-        <Label>NUDGE THE GUYS</Label>
+        {/* ── messages ── */}
+        <Label>MESSAGE THE GUYS</Label>
         <Card>
           <p style={{fontSize:12.5,color:C.inkMuted,lineHeight:1.65,margin:"0 0 14px"}}>
-            Builds the message from who actually owes a pick. Emails get ignored;
-            a text does not.
+            Two messages. <b style={{color:C.ink,fontWeight:600}}>The week ahead</b> lays
+            out all three rounds and who picks against whom — send it early and
+            nobody has to open the app to find out whose week it is.{" "}
+            <b style={{color:C.ink,fontWeight:600}}>Who{"'"}s late</b> names only the men
+            still owing a pick. Neither one mentions you.
           </p>
-          <Btn onClick={() => run("nudge", async () => {
+          <Btn onClick={() => run("week", async () => {
+            const r = await call("/week-ahead");
+            setNudge(r);
+            if (!r.text) setDone("No open week in either pool — nothing to send.");
+          })} disabled={busy === "week"}>
+            {busy === "week" ? "BUILDING…" : "THE WEEK AHEAD"}
+          </Btn>
+          <div style={{height:9}}/>
+          <Btn tone="quiet" onClick={() => run("nudge", async () => {
             const r = await call("/nudge");
             setNudge(r);
             if (!r.text) setDone("Nobody owes a pick — nothing to send.");
           })} disabled={busy === "nudge"}>
-            {busy === "nudge" ? "CHECKING…" : "BUILD THE MESSAGE"}
+            {busy === "nudge" ? "CHECKING…" : "WHO'S LATE"}
           </Btn>
           {nudge && nudge.text && (
             <div style={{marginTop:14}}>
               <div style={{background:C.bg,border:`1px solid ${C.hairInk}`,borderRadius:10,
-                padding:"13px 15px",fontSize:13,color:C.ink,lineHeight:1.65}}>{nudge.text}</div>
+                padding:"13px 15px",fontSize:13,color:C.ink,lineHeight:1.65,
+                whiteSpace:"pre-wrap"}}>{nudge.text}</div>
               <div style={{display:"flex",gap:9,marginTop:10}}>
                 <Btn tone="quiet" small onClick={() => copy(nudge.text)}>COPY</Btn>
                 <Btn tone="quiet" small
