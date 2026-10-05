@@ -11,6 +11,84 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 const API = import.meta.env.VITE_API_URL;
 
+// ─── Push notifications ──────────────────────────────────
+// The browser holds the subscription; the server only ever sees the
+// endpoint it was handed. Nothing here can turn notifications on without
+// the man tapping — that is the browser's rule, not ours, and a good one.
+const pushSupported = () =>
+  typeof navigator !== "undefined" &&
+  "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+
+// iOS only allows this once the site has been added to the home screen and
+// opened from the icon. Worth saying plainly rather than failing silently.
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const installedToHomeScreen = () =>
+  window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+const b64ToBytes = (b64) => {
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+};
+
+const pushApi = async (path, token, opts = {}) => {
+  const r = await fetch(API + "/api/push" + path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || "Something went wrong");
+  return body;
+};
+
+async function pushTurnOn(token) {
+  if (!pushSupported()) throw new Error("This browser cannot do notifications.");
+  if (isIOS() && !installedToHomeScreen()) {
+    throw new Error("On an iPhone, add Barry Bets to your home screen first, then open it from the icon.");
+  }
+
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    throw new Error(permission === "denied"
+      ? "Notifications are blocked for this site in your phone's settings."
+      : "Notifications were not allowed.");
+  }
+
+  const { key } = await pushApi("/key", token);
+  const existing = await reg.pushManager.getSubscription();
+  const sub = existing || await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: b64ToBytes(key),
+  });
+
+  await pushApi("/subscribe", token, {
+    method: "POST",
+    body: JSON.stringify({ subscription: sub.toJSON(), label: navigator.platform || "phone" }),
+  });
+  return true;
+}
+
+async function pushTurnOff(token) {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) {
+      await pushApi("/unsubscribe", token, { method: "POST", body: JSON.stringify({ endpoint: sub.endpoint }) });
+      await sub.unsubscribe();
+    } else {
+      await pushApi("/unsubscribe", token, { method: "POST", body: "{}" });
+    }
+  } catch (e) {
+    await pushApi("/unsubscribe", token, { method: "POST", body: "{}" });
+  }
+  return true;
+}
+
 // ─── Constants ───────────────────────────────────────────────
 const TID = "00000000-0000-0000-0000-000000002026";
 const LEAGUE_ID = "a0000000-0000-0000-0000-000000000001";
@@ -559,6 +637,42 @@ const BracketScreen = () => {
 
 // ─── League / Profile Screen ─────────────────────────────────
 const LeagueScreen = ({user,displayName,onLogout}) => {
+  // Push state: null while we work out whether this phone is already on.
+  const [pushOn, setPushOn] = useState(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!pushSupported()) { if (alive) setPushOn("unsupported"); return; }
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = reg && await reg.pushManager.getSubscription();
+        if (alive) setPushOn(!!sub && Notification.permission === "granted");
+      } catch { if (alive) setPushOn(false); }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const togglePush = async () => {
+    setPushBusy(true); setPushMsg("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) throw new Error("Sign in again first.");
+      if (pushOn === true) {
+        await pushTurnOff(token);
+        setPushOn(false); setPushMsg("Reminders off.");
+      } else {
+        await pushTurnOn(token);
+        setPushOn(true); setPushMsg("You're set. Sending a test now\u2026");
+        await pushApi("/test", token, { method: "POST", body: "{}" }).catch(() => {});
+      }
+    } catch (e) { setPushMsg(e.message); }
+    setPushBusy(false);
+  };
+
   const [newPassword,setNewPassword]=useState("");
   const [confirmPassword,setConfirmPassword]=useState("");
   const [pwMsg,setPwMsg]=useState("");
@@ -652,9 +766,32 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
           <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Email reminders</span>
           <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"12px 0",borderTop:"1px solid "+C.border}}>
           <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Push notifications</span>
-          <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
+          {pushOn === "unsupported" ? (
+            <span style={{fontSize:12,color:C.creamMuted,fontFamily:"'Raleway'"}}>Not on this browser</span>
+          ) : (
+            <button disabled={pushBusy || pushOn === null} onClick={togglePush} style={{
+              background: pushOn ? C.gold : "transparent",
+              color: pushOn ? C.navyDark : C.gold,
+              border: pushOn ? "none" : "1px solid "+C.gold,
+              borderRadius:20, padding:"7px 16px", cursor: pushBusy ? "default" : "pointer",
+              fontFamily:"'Raleway'", fontSize:11, fontWeight:700, letterSpacing:"0.1em",
+              opacity: pushBusy || pushOn === null ? 0.5 : 1, flexShrink:0,
+            }}>
+              {pushOn === null ? "\u2026" : pushBusy ? "WORKING" : pushOn ? "ON" : "TURN ON"}
+            </button>
+          )}
+        </div>
+        {pushMsg && (
+          <div style={{fontSize:12,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,paddingBottom:4}}>
+            {pushMsg}
+          </div>
+        )}
+        <div style={{fontSize:11.5,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,paddingTop:4,borderTop:"1px solid "+C.border}}>
+          Two reminders per deadline {"\u2014"} one the day before, one three hours out {"\u2014"} and only if
+          your pick is still missing. On an iPhone, add Barry Bets to your home screen first and open it
+          from the icon, or the phone will not offer.
         </div>
       </div>
       <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px"}}>

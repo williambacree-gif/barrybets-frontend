@@ -33,7 +33,7 @@ const teamName = s => String(s || "");
 const venmoLink = (handle, amount, note) =>
   `https://venmo.com/${handle}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`;
 const chargeNote = c =>
-  c.kind === "entry" ? "Barry Bets CFB entry" : `Barry Bets CFB buyback wk${c.pool_week ?? ""}`;
+  c.kind === "entry" ? "Barry Bets CFB entry" : `Barry Bets CFB buy back in wk${c.pool_week ?? ""}`;
 
 const Eyebrow = ({ children, tone = C.inkFaint, style }) => (
   <div style={{ fontFamily:SANS, fontSize:9, fontWeight:700, letterSpacing:"0.22em",
