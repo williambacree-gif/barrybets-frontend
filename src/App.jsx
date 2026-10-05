@@ -637,41 +637,6 @@ const BracketScreen = () => {
 
 // ─── League / Profile Screen ─────────────────────────────────
 const LeagueScreen = ({user,displayName,onLogout}) => {
-  // Push state: null while we work out whether this phone is already on.
-  const [pushOn, setPushOn] = useState(null);
-  const [pushBusy, setPushBusy] = useState(false);
-  const [pushMsg, setPushMsg] = useState("");
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!pushSupported()) { if (alive) setPushOn("unsupported"); return; }
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        const sub = reg && await reg.pushManager.getSubscription();
-        if (alive) setPushOn(!!sub && Notification.permission === "granted");
-      } catch { if (alive) setPushOn(false); }
-    })();
-    return () => { alive = false; };
-  }, []);
-
-  const togglePush = async () => {
-    setPushBusy(true); setPushMsg("");
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (!token) throw new Error("Sign in again first.");
-      if (pushOn === true) {
-        await pushTurnOff(token);
-        setPushOn(false); setPushMsg("Reminders off.");
-      } else {
-        await pushTurnOn(token);
-        setPushOn(true); setPushMsg("You're set. Sending a test now\u2026");
-        await pushApi("/test", token, { method: "POST", body: "{}" }).catch(() => {});
-      }
-    } catch (e) { setPushMsg(e.message); }
-    setPushBusy(false);
-  };
 
   const [newPassword,setNewPassword]=useState("");
   const [confirmPassword,setConfirmPassword]=useState("");
@@ -766,32 +731,9 @@ const LeagueScreen = ({user,displayName,onLogout}) => {
           <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Email reminders</span>
           <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>Coming Soon</span>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"12px 0",borderTop:"1px solid "+C.border}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderTop:"1px solid "+C.border}}>
           <span style={{fontSize:13,color:C.cream,fontFamily:"'Raleway'"}}>Push notifications</span>
-          {pushOn === "unsupported" ? (
-            <span style={{fontSize:12,color:C.creamMuted,fontFamily:"'Raleway'"}}>Not on this browser</span>
-          ) : (
-            <button disabled={pushBusy || pushOn === null} onClick={togglePush} style={{
-              background: pushOn ? C.gold : "transparent",
-              color: pushOn ? C.navyDark : C.gold,
-              border: pushOn ? "none" : "1px solid "+C.gold,
-              borderRadius:20, padding:"7px 16px", cursor: pushBusy ? "default" : "pointer",
-              fontFamily:"'Raleway'", fontSize:11, fontWeight:700, letterSpacing:"0.1em",
-              opacity: pushBusy || pushOn === null ? 0.5 : 1, flexShrink:0,
-            }}>
-              {pushOn === null ? "\u2026" : pushBusy ? "WORKING" : pushOn ? "ON" : "TURN ON"}
-            </button>
-          )}
-        </div>
-        {pushMsg && (
-          <div style={{fontSize:12,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,paddingBottom:4}}>
-            {pushMsg}
-          </div>
-        )}
-        <div style={{fontSize:11.5,color:C.creamMuted,fontFamily:"'Raleway'",lineHeight:1.5,paddingTop:4,borderTop:"1px solid "+C.border}}>
-          Two reminders per deadline {"\u2014"} one the day before, one three hours out {"\u2014"} and only if
-          your pick is still missing. On an iPhone, add Barry Bets to your home screen first and open it
-          from the icon, or the phone will not offer.
+          <span style={{fontSize:12,color:C.gold,fontFamily:"'Raleway'",fontWeight:600}}>On the home screen</span>
         </div>
       </div>
       <div style={{background:C.navyLight,borderRadius:C.r,border:"1px solid "+C.border,padding:"20px"}}>
@@ -886,6 +828,79 @@ const GasTicker = () => {
           letterSpacing:"0.04em", whiteSpace:"nowrap"}}>
           {arrow} {Math.abs(diff).toFixed(3)} WK
         </span>
+      )}
+    </div>
+  );
+};
+
+// The reminder switch. It lives on the hub because that is the only screen
+// every man actually lands on — the old League tab is behind a competition
+// that no longer exists, which is where this first went, wrongly.
+const PushReminders = () => {
+  const [on, setOn] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!pushSupported()) { if (alive) setOn("unsupported"); return; }
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = reg && await reg.pushManager.getSubscription();
+        if (alive) setOn(!!sub && Notification.permission === "granted");
+      } catch { if (alive) setOn(false); }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const toggle = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) throw new Error("Sign in again first.");
+      if (on === true) {
+        await pushTurnOff(token);
+        setOn(false); setMsg("Reminders off.");
+      } else {
+        await pushTurnOn(token);
+        setOn(true); setMsg("You are set \u2014 sending a test now.");
+        await pushApi("/test", token, { method: "POST", body: "{}" }).catch(() => {});
+      }
+    } catch (e) { setMsg(e.message); }
+    setBusy(false);
+  };
+
+  const INK = "rgba(23,32,58,0.70)";
+  return (
+    <div style={{padding:"26px 28px 0"}}>
+      <div style={{borderTop:"1px solid rgba(23,32,58,0.10)",paddingTop:20,
+        display:"flex",alignItems:"center",gap:14}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:"'Cormorant Garamond', serif",fontSize:19,fontWeight:600,
+            color:"#17203A",lineHeight:1.2}}>Pick reminders</div>
+          <div style={{fontSize:12.5,color:INK,marginTop:4,lineHeight:1.5,fontFamily:"'Raleway'"}}>
+            {on === "unsupported"
+              ? "This browser cannot do notifications."
+              : "A nudge the day before and three hours out \u2014 only if your pick is still missing."}
+          </div>
+        </div>
+        {on !== "unsupported" && (
+          <button disabled={busy || on === null} onClick={toggle} style={{
+            flexShrink:0, borderRadius:20, padding:"8px 17px", cursor: busy ? "default" : "pointer",
+            background: on ? "#B08D3F" : "transparent",
+            color: on ? "#FBF9F5" : "#B08D3F",
+            border: on ? "none" : "1px solid #B08D3F",
+            fontFamily:"'Raleway'", fontSize:10.5, fontWeight:700, letterSpacing:"0.12em",
+            opacity: busy || on === null ? 0.5 : 1,
+          }}>
+            {on === null ? "\u2026" : busy ? "WORKING" : on ? "ON" : "TURN ON"}
+          </button>
+        )}
+      </div>
+      {msg && (
+        <div style={{fontSize:12,color:INK,marginTop:10,lineHeight:1.5,fontFamily:"'Raleway'"}}>{msg}</div>
       )}
     </div>
   );
@@ -1016,6 +1031,8 @@ const CompetitionSelector = ({user,displayName,onSelect,onLogout,onMNF,onCFB,onC
           />
         )}
       </div>
+
+      <PushReminders/>
 
       <div style={{padding:"44px 28px 0",textAlign:"center"}}>
         <button onClick={onLogout} style={{background:"none",border:"none",cursor:"pointer",
