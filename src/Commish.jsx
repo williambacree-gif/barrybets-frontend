@@ -103,6 +103,11 @@ export default function Commish() {
   const [voidConfirm, setVoidConfirm] = useState("");
   const [showVoid, setShowVoid] = useState(false);
 
+  // Overriding a pick: one week's board, and whoever is being changed.
+  const [board, setBoard] = useState(null);
+  const [ovPlayer, setOvPlayer] = useState(null);
+  const [ovReason, setOvReason] = useState("");
+
   useEffect(() => {
     supabase.auth.getSession().then(({data}) => setToken(data?.session?.access_token || null));
   }, []);
@@ -129,6 +134,17 @@ export default function Commish() {
       .finally(() => setLoading(false));
   }, [token, call]);
   useEffect(load, [load]);
+
+  // The board is fetched on its own so switching weeks does not reload
+  // the whole panel.
+  const loadBoard = useCallback((week) => {
+    if (!token) return;
+    call("/pick-board" + (week ? `?pool_week=${week}` : ""))
+      .then(setBoard)
+      .catch(e => setErr(e.message));
+  }, [token, call]);
+
+  useEffect(() => { loadBoard(); }, [loadBoard]);
 
   const run = async (name, fn) => {
     setBusy(name); setErr(""); setDone("");
@@ -372,6 +388,153 @@ export default function Commish() {
         </Card>
 
         {/* ── void a week ── */}
+        <Label>FIX A SURVIVOR PICK</Label>
+        <Card>
+          <p style={{fontSize:12.5,color:C.inkMuted,lineHeight:1.65,margin:"0 0 14px"}}>
+            For the man who texts you his pick after the board locks. Sets it as
+            though it landed on time, grades it if the game is already done, and
+            writes down the reason where only you can see it.
+          </p>
+
+          {!board ? (
+            <div style={{fontSize:12,color:C.inkFaint}}>Loading the board…</div>
+          ) : (
+            <>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+                {(board.weeks || []).map(w => (
+                  <button key={w} onClick={() => { setOvPlayer(null); loadBoard(w); }}
+                    style={{padding:"6px 11px",borderRadius:2,cursor:"pointer",
+                      fontFamily:SANS,fontSize:10.5,fontWeight:700,letterSpacing:"0.1em",
+                      background: w === board.week ? C.navy : "transparent",
+                      color: w === board.week ? C.cream : C.ink,
+                      border:`1px solid ${w === board.week ? C.navy : C.hairInk}`}}>
+                    WK {w}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{fontSize:11.5,color:C.inkMuted,marginBottom:12}}>
+                Board {board.locked ? "locked" : "open"}
+                {board.lock_label ? ` · first kickoff ${board.lock_label}` : ""}
+                {board.missing && board.missing.length
+                  ? ` · no pick yet: ${board.missing.join(", ")}`
+                  : " · everyone alive has picked"}
+              </div>
+
+              {(board.roster || []).map(p => (
+                <div key={p.id} style={{padding:"10px 0",borderBottom:`1px solid ${C.hair}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{flex:1,fontSize:14,fontFamily:SERIF,fontWeight:600,color:C.ink}}>
+                      {p.name}
+                      <span style={{marginLeft:8,fontFamily:SANS,fontSize:9.5,fontWeight:700,
+                        letterSpacing:"0.1em",color: p.status === "alive" ? C.green : C.red}}>
+                        {p.status === "alive" ? "ALIVE" : `OUT · WK ${p.eliminated_week ?? "?"}`}
+                      </span>
+                    </span>
+                    <div style={{width:96,flexShrink:0}}>
+                      <Btn tone="quiet" small
+                        onClick={() => { setOvPlayer(ovPlayer === p.id ? null : p.id); setOvReason(""); }}>
+                        {ovPlayer === p.id ? "CLOSE" : (p.pick ? "CHANGE" : "SET PICK")}
+                      </Btn>
+                    </div>
+                  </div>
+                  <div style={{fontSize:11.5,color:C.inkMuted,marginTop:3}}>
+                    {p.pick
+                      ? `Week ${board.week}: ${p.pick.team}${p.pick.result && p.pick.result !== "pending" ? ` · ${p.pick.result}` : ""}${p.pick.auto_assigned ? " · auto" : ""}`
+                      : `No pick for week ${board.week}`}
+                  </div>
+
+                  {ovPlayer === p.id && (
+                    <div style={{marginTop:10,padding:12,background:C.bg,border:`1px solid ${C.hair}`}}>
+                      <input value={ovReason} onChange={e => setOvReason(e.target.value)}
+                        placeholder="Reason (e.g. texted me before kickoff)"
+                        style={{width:"100%",boxSizing:"border-box",padding:"9px 10px",marginBottom:10,
+                          border:`1px solid ${C.hairInk}`,borderRadius:2,background:"#fff",
+                          fontFamily:SANS,fontSize:13,color:C.ink}} />
+
+                      {(board.board || []).map(g => {
+                        const opt = (side) => {
+                          const teamId = side === "home" ? g.home_team_id : g.away_team_id;
+                          const team   = side === "home" ? g.home : g.away;
+                          const rank   = side === "home" ? g.home_rank : g.away_rank;
+                          const isNow  = p.pick && p.pick.team_id === teamId;
+                          const used   = p.used_team_ids.includes(teamId) && !isNow;
+                          return (
+                            <button key={side} disabled={used || busy === `sp${p.id}`}
+                              onClick={() => run(`sp${p.id}`, async () => {
+                                const r = await call("/set-pick", {method:"POST",
+                                  body: JSON.stringify({player_id:p.id, game_id:g.id, side, reason:ovReason})});
+                                setDone(r.message); setOvPlayer(null); setOvReason("");
+                                loadBoard(board.week); load();
+                              })}
+                              style={{flex:1,textAlign:"left",padding:"8px 10px",borderRadius:2,
+                                border:`1px solid ${isNow ? C.brass : C.hairInk}`,
+                                background: used ? "rgba(23,32,58,0.04)" : "#fff",
+                                color: used ? C.inkFaint : C.ink,
+                                cursor: used ? "not-allowed" : "pointer",
+                                fontFamily:SANS,fontSize:12.5,opacity: used ? 0.6 : 1}}>
+                              {rank ? <span style={{color:C.brass,fontWeight:700}}>#{rank} </span> : null}
+                              {team}
+                              {used ? <span style={{display:"block",fontSize:9.5}}>already used</span> : null}
+                              {isNow ? <span style={{display:"block",fontSize:9.5,color:C.brass}}>current pick</span> : null}
+                            </button>
+                          );
+                        };
+                        return (
+                          <div key={g.id} style={{marginBottom:9}}>
+                            <div style={{fontSize:10,color:C.inkFaint,marginBottom:4}}>
+                              {g.kickoff_label}
+                              {g.status === "final" ? ` · final ${g.away_score}–${g.home_score}` : ""}
+                            </div>
+                            <div style={{display:"flex",gap:7}}>{opt("away")}{opt("home")}</div>
+                          </div>
+                        );
+                      })}
+
+                      <div style={{display:"flex",gap:7,marginTop:10}}>
+                        {p.status !== "alive" && (
+                          <Btn tone="quiet" small disabled={busy === `ri${p.id}`}
+                            onClick={() => run(`ri${p.id}`, async () => {
+                              const r = await call("/reinstate", {method:"POST",
+                                body: JSON.stringify({player_id:p.id, reason:ovReason})});
+                              setDone(r.message); setOvPlayer(null); loadBoard(board.week); load();
+                            })}>PUT HIM BACK IN</Btn>
+                        )}
+                        {p.status === "alive" && (
+                          <Btn tone="danger" small disabled={busy === `el${p.id}`}
+                            onClick={() => run(`el${p.id}`, async () => {
+                              const r = await call("/eliminate", {method:"POST",
+                                body: JSON.stringify({player_id:p.id, pool_week:board.week, reason:ovReason})});
+                              setDone(r.message); setOvPlayer(null); loadBoard(board.week); load();
+                            })}>KNOCK HIM OUT · WK {board.week}</Btn>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {(board.log || []).length > 0 && (
+                <div style={{marginTop:16,paddingTop:12,borderTop:`1px solid ${C.hairInk}`}}>
+                  <div style={{fontFamily:SANS,fontSize:9.5,fontWeight:700,letterSpacing:"0.16em",
+                    color:C.brass,marginBottom:8}}>OVERRIDE LOG — YOURS ONLY</div>
+                  {board.log.map(o => (
+                    <div key={o.id} style={{fontSize:11.5,color:C.ink,padding:"5px 0"}}>
+                      <strong>{(o.detail && o.detail.player) || "Someone"}</strong>
+                      {" · "}{String(o.action).replace("_"," ")}
+                      {o.pool_week ? ` · wk ${o.pool_week}` : ""}
+                      {o.detail && o.detail.team ? ` · ${o.detail.team}` : ""}
+                      <div style={{color:C.inkFaint,fontSize:10.5}}>
+                        {o.acted_label}{o.reason ? ` · ${o.reason}` : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+
         <Label>VOID A SURVIVOR WEEK</Label>
         <Card>
           <p style={{fontSize:12.5,color:C.inkMuted,lineHeight:1.65,margin:"0 0 14px"}}>
