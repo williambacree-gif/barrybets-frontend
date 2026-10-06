@@ -109,27 +109,49 @@ const NameBtn = ({ onClick, bold, children }) => (
 function seasonFor(schedule, playerId) {
   const out = [];
   for (const w of schedule) {
-    const m = (w.matchups || []).find(x => x.picker_id === playerId || x.opponent_id === playerId);
-    if (!m) continue;
-    const isPicker = m.picker_id === playerId;
-    const side = !m.picked_side ? null
-      : isPicker ? m.picked_side
-      : m.picked_side === "home" ? "away" : "home";
-    const won = m.result === "pending" || !m.result ? null
-      : isPicker ? m.result === "picker" : m.result === "opponent";
-    out.push({
-      week_no: w.week_no,
-      // Each matchup is played on its own night, so it carries its own
-      // game; w.game is only the week's headline.
-      game: m.game || w.game,
-      isPicker, side, won,
-      isPush: !!m.is_push,
-      auto: !!m.auto_assigned && isPicker,
-      foe: (isPicker ? m.opponent : m.picker)?.display_name,
+    // A week holds up to three rounds — Thursday, Sunday night, Monday —
+    // and a man can be in more than one of them. Taking only the first was
+    // why a 4-3 record showed one win and two losses underneath it.
+    const mine = (w.matchups || []).filter(x =>
+      x.picker_id === playerId || x.opponent_id === playerId);
+    if (!mine.length) continue;
+
+    // Played order, so a week reads down the screen the way it happened.
+    const played = [...mine].sort((a, b) => {
+      const ka = a.game?.kickoff_at, kb = b.game?.kickoff_at;
+      if (ka && kb) return ka < kb ? -1 : ka > kb ? 1 : 0;
+      return (a.slot ?? 0) - (b.slot ?? 0);
     });
+
+    for (const m of played) {
+      const isPicker = m.picker_id === playerId;
+      const side = !m.picked_side ? null
+        : isPicker ? m.picked_side
+        : m.picked_side === "home" ? "away" : "home";
+      const won = m.result === "pending" || !m.result ? null
+        : isPicker ? m.result === "picker" : m.result === "opponent";
+      out.push({
+        id: m.id,
+        week_no: w.week_no,
+        // Only worth naming the night when the week holds more than one.
+        slot: played.length > 1 ? m.slot_name : null,
+        // Each matchup is played on its own night, so it carries its own
+        // game; w.game is only the week's headline.
+        game: m.game || w.game,
+        isPicker, side, won,
+        isPush: !!m.is_push,
+        auto: !!m.auto_assigned && isPicker,
+        foe: (isPicker ? m.opponent : m.picker)?.display_name,
+      });
+    }
   }
   return out;
 }
+
+// A round nobody has picked yet is not a round anyone missed. Without this
+// every unplayed week on the board read "NO PICK", which looks like a
+// forfeit rather than a Thursday that hasn't come round.
+const notYet = g => !g || (g.status !== "final" && new Date(g.kickoff_at) > new Date());
 
 function PlayerSeason({ rows }) {
   if (!rows.length) return (
@@ -145,10 +167,15 @@ function PlayerSeason({ rows }) {
         const forS = !g ? null : r.side === "home" ? g.home_score : r.side === "away" ? g.away_score : g.away_score;
         const agS  = !g ? null : r.side === "home" ? g.away_score : r.side === "away" ? g.home_score : g.home_score;
         return (
-          <div key={r.week_no} style={{display:"flex", alignItems:"baseline", gap:11,
+          <div key={r.id || `${r.week_no}-${r.slot || "x"}`}
+            style={{display:"flex", alignItems:"baseline", gap:11,
             padding:"11px 0", borderBottom: i === rows.length-1 ? "none" : `1px solid ${C.hair}`}}>
             <span style={{fontFamily:SANS, fontSize:9, fontWeight:700, letterSpacing:"0.1em",
-              color:C.inkFaint, width:28, flexShrink:0}}>WK{r.week_no}</span>
+              color:C.inkFaint, width:28, flexShrink:0}}>
+              WK{r.week_no}
+              {r.slot && <span style={{display:"block", fontSize:8, letterSpacing:"0.06em",
+                opacity:0.8, marginTop:2}}>{r.slot}</span>}
+            </span>
             <div style={{flex:1, minWidth:0}}>
               <div style={{fontSize:13.5, fontWeight:600, color:C.ink}}>
                 {!g ? "Game TBD"
@@ -158,7 +185,8 @@ function PlayerSeason({ rows }) {
                     </>}
               </div>
               <div style={{fontSize:11, color:C.inkMuted, marginTop:2}}>
-                {r.isPicker ? "Picked" : "Took the other side"}
+                {r.side ? (r.isPicker ? "Picked" : "Took the other side")
+                  : (r.isPicker ? "Has the pick" : "Takes the other side")}
                 {r.foe ? ` ${"·"} vs ${r.foe}` : ""}
                 {r.auto ? ` ${"·"} auto-assigned` : ""}
               </div>
@@ -170,7 +198,8 @@ function PlayerSeason({ rows }) {
               <div style={{fontFamily:SANS, fontSize:8.5, fontWeight:700,
                 letterSpacing:"0.12em", color:tone, marginTop:1}}>
                 {r.isPush ? "PUSH"
-                  : r.won === null ? (r.side ? "PENDING" : "NO PICK")
+                  : r.won === null
+                    ? (r.side ? "PENDING" : notYet(g) ? "NOT YET" : "NO PICK")
                   : r.won ? "WON" : "LOST"}
               </div>
             </div>
